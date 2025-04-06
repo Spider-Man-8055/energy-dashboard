@@ -1,4 +1,3 @@
-%%writefile app.py
 # (Insert the full Streamlit code I gave you above here)
 %%writefile app.py
 import streamlit as st
