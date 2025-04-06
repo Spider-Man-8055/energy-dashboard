@@ -1,71 +1,103 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_absolute_error, r2_score
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error
+import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="AI Energy Optimizer Dashboard", layout="wide")
-st.title("AI-Powered Commercial Energy Optimizer")
+# Constants
+TARIFF = 8.5  # INR per kWh
+CO2_PER_KWH = 0.82  # kg CO2 per kWh (India average)
 
-st.markdown("---")
+st.set_page_config(page_title="AI Energy Dashboard", layout="wide")
+st.title("AI-Powered Energy Management for Industrial Facility")
 
-st.header("Step 1: Enter Monthly Energy Data")
+st.markdown("### Enter monthly data manually for analysis")
 
-months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-data = []
+# Data entry table for 12 months
+months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+input_data = []
 
-for month in months:
-    st.subheader(f"{month} Data")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        energy_kwh = st.number_input(f"{month} - Energy Consumed (kWh)", min_value=0.0, key=f"kwh_{month}")
-        avg_temp = st.number_input(f"{month} - Avg Temp (°C)", key=f"temp_{month}")
-    with col2:
-        humidity = st.number_input(f"{month} - Humidity (%)", key=f"humidity_{month}")
-        occupancy = st.slider(f"{month} - Occupancy (%)", 0, 100, key=f"occupancy_{month}")
-    with col3:
-        hvac = st.slider(f"{month} - HVAC Usage (%)", 0, 100, key=f"hvac_{month}")
-        lighting = st.slider(f"{month} - Lighting Usage (%)", 0, 100, key=f"lighting_{month}")
-        output = st.number_input(f"{month} - Production Output (optional)", min_value=0.0, key=f"output_{month}")
+for i in range(12):
+    with st.expander(f"Month: {months[i]}"):
+        energy = st.number_input(f"Energy used (kWh) - {months[i]}", min_value=0.0, key=f"e_{i}")
+        avg_temp = st.number_input(f"Average Temp (°C) - {months[i]}", key=f"t_{i}")
+        humidity = st.number_input(f"Humidity (%) - {months[i]}", key=f"h_{i}")
+        occupancy = st.slider(f"Occupancy (%) - {months[i]}", 0, 100, 75, key=f"o_{i}")
+        hvac = st.slider(f"HVAC Usage (%) - {months[i]}", 0, 100, 40, key=f"hvac_{i}")
+        lighting = st.slider(f"Lighting Usage (%) - {months[i]}", 0, 100, 30, key=f"light_{i}")
+        machinery = st.slider(f"Machinery Usage (%) - {months[i]}", 0, 100, 30, key=f"mach_{i}")
 
-    cost_inr = round(energy_kwh * 8.5, 2)
+        input_data.append([months[i], i+1, energy, avg_temp, humidity, occupancy, hvac, lighting, machinery])
 
-    data.append({
-        "Month": month,
-        "Energy_kWh": energy_kwh,
-        "Cost_INR": cost_inr,
-        "Avg_Temp": avg_temp,
-        "Humidity": humidity,
-        "Occupancy_%": occupancy,
-        "HVAC_Usage_%": hvac,
-        "Lighting_Usage_%": lighting,
-        "Production_Output": output,
-        "Month_Num": months.index(month)+1
-    })
+df = pd.DataFrame(input_data, columns=["Month", "Month_Num", "Energy_kWh", "Avg_Temp", "Humidity", "Occupancy_%", "HVAC_%", "Lighting_%", "Machinery_%"])
+df["Cost_INR"] = df["Energy_kWh"] * TARIFF
+df["CO2_kg"] = df["Energy_kWh"] * CO2_PER_KWH
 
-if st.button("Run AI Optimization"):
-    df = pd.DataFrame(data)
-
-    st.subheader("Uploaded Monthly Data")
-    st.dataframe(df.style.format("{:.2f}"))
-
-    # Train AI Model
-    X = df[["Month_Num", "Avg_Temp", "Humidity", "Occupancy_%", "HVAC_Usage_%", "Lighting_Usage_%"]]
+if st.button("Run AI Analysis"):
+    st.success("AI Analysis Complete")
+    
+    # Features and target
+    X = df[["Month_Num", "Avg_Temp", "Humidity", "Occupancy_%", "HVAC_%", "Lighting_%", "Machinery_%"]]
     y = df["Energy_kWh"]
 
-    model = RandomForestRegressor(n_estimators=200, random_state=42)
+    # Train simple model
+    model = LinearRegression()
     model.fit(X, y)
-    df["Predicted_Energy_kWh"] = model.predict(X)
-    df["Efficiency (kWh/Output)"] = df.apply(lambda row: row["Energy_kWh"] / row["Production_Output"] if row["Production_Output"] > 0 else np.nan, axis=1)
 
-    st.subheader("AI Model Predictions")
-    st.dataframe(df[["Month", "Energy_kWh", "Predicted_Energy_kWh", "Cost_INR", "Efficiency (kWh/Output)"]].style.format("{:.2f}"))
+    # Predictions
+    df["Predicted_Energy"] = model.predict(X)
+    df["Predicted_Cost"] = df["Predicted_Energy"] * TARIFF
 
-    st.subheader("AI Energy Optimization Suggestions")
-    for idx, row in df.iterrows():
-        if row["Predicted_Energy_kWh"] > row["Energy_kWh"] * 1.1:
-            st.warning(f"{row['Month']}: High predicted energy! Consider reducing HVAC or lighting load.")
-        elif row["Efficiency (kWh/Output)"] and row["Efficiency (kWh/Output)"] > 1.5 * df["Efficiency (kWh/Output)"].mean():
-            st.info(f"{row['Month']}: Low production efficiency detected. Consider reviewing equipment usage or shift timings.")
+    # Efficiency Score
+    avg_pred = df["Predicted_Energy"].mean()
+    df["Efficiency_Score"] = np.round((avg_pred / df["Predicted_Energy"]) * 100, 2)
+
+    # Peak Load Detection
+    peak_month = df.loc[df["Energy_kWh"].idxmax(), "Month"]
+
+    # Benchmarking
+    monthly_avg = df["Energy_kWh"].mean()
+    df["Benchmarking"] = df["Energy_kWh"].apply(lambda x: "Above Average" if x > monthly_avg else "Below Average")
+
+    # Smart Recommendations
+    def get_recommendation(row):
+        if row["HVAC_%"] > 50:
+            return "Optimize HVAC systems"
+        elif row["Lighting_%"] > 50:
+            return "Use efficient lighting"
+        elif row["Machinery_%"] > 50:
+            return "Schedule machinery better"
+        elif row["Efficiency_Score"] < 85:
+            return "Improve energy practices"
         else:
-            st.success(f"{row['Month']}: Energy usage is within optimized range.")
+            return "Good"
+    
+    df["Smart_Recommendation"] = df.apply(get_recommendation, axis=1)
+
+    # Display output
+    st.dataframe(df)
+
+    # Charts
+    st.subheader("Visualization")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.bar_chart(df[["Month", "Energy_kWh"]].set_index("Month"))
+        st.bar_chart(df[["Month", "Predicted_Energy"]].set_index("Month"))
+
+    with col2:
+        st.line_chart(df[["Month", "Efficiency_Score"]].set_index("Month"))
+        st.line_chart(df[["Month", "Cost_INR", "Predicted_Cost"]].set_index("Month"))
+
+    # Summary
+    st.subheader("AI Summary Report")
+    st.markdown(f"**Peak Load Month:** {peak_month}")
+    st.markdown(f"**Average Energy Usage:** {monthly_avg:.2f} kWh")
+    st.markdown(f"**Average Monthly Cost:** ₹{df['Cost_INR'].mean():.2f}")
+    st.markdown(f"**Total CO₂ Emissions (kg):** {df['CO2_kg'].sum():.2f}")
+    st.markdown(f"**Highest Efficiency Score:** {df['Efficiency_Score'].max():.2f}")
+
+    st.download_button("Download Report as CSV", data=df.to_csv(index=False), file_name="energy_ai_analysis.csv", mime="text/csv")
