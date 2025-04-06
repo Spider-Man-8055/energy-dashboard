@@ -162,7 +162,7 @@ ineff_areas = {
 top_ineff = max(ineff_areas, key=ineff_areas.get)
 
     # Display output
-    st.markdown("### 🧠 AI Recommendations")
+st.markdown("### 🧠 AI Recommendations")
 
 for i, row in df.iterrows():
     st.markdown(f"""
