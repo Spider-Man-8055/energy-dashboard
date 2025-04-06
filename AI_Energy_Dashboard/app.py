@@ -185,12 +185,12 @@ with col1:
 with col2:
     st.markdown("#### 💰 Energy Cost (Actual vs Predicted)")
     st.line_chart(df[["Month", "Cost_INR", "Predicted_Cost"]].set_index("Month"))
-     st.markdown("### ⚙️ Key Performance Indicators (KPIs)")
-     kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-     kpi1.metric("📊 Avg Monthly Energy", f"{monthly_avg:.2f} kWh")
-     kpi2.metric("💸 Avg Monthly Cost", f"₹{df['Cost_INR'].mean():.2f}")
-     kpi3.metric("🌿 Total CO₂ Emitted", f"{df['CO2_kg'].sum():.2f} kg")
-     kpi4.metric("🔺 Peak Load Month", f"{peak_month}")
+st.markdown("### ⚙️ Key Performance Indicators (KPIs)")
+kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+kpi1.metric("📊 Avg Monthly Energy", f"{monthly_avg:.2f} kWh")
+kpi2.metric("💸 Avg Monthly Cost", f"₹{df['Cost_INR'].mean():.2f}")
+kpi3.metric("🌿 Total CO₂ Emitted", f"{df['CO2_kg'].sum():.2f} kg")
+kpi4.metric("🔺 Peak Load Month", f"{peak_month}")
 
     st.markdown("#### ⚡️ Monthly Efficiency Score")
 fig, ax = plt.subplots(figsize=(8, 4))
