@@ -10,63 +10,24 @@ TARIFF = 8.5  # INR per kWh
 CO2_PER_KWH = 0.82  # kg CO2 per kWh (India average)
 
 st.set_page_config(page_title="AI Energy Dashboard", layout="wide")
-st.title("AI-Powered Energy Management for Industrial Facility")
+st.markdown("<h1 style='text-align: center; color: #2E8B57;'>🌱 Smart AI Energy Dashboard for Industries</h1>", unsafe_allow_html=True)
 # CSV Template Download
 import io
 
-# CSV Template + Upload + Manual Entry
-st.markdown("### Option 1: Upload Monthly Energy Data (CSV)")
+st.markdown("## 📁 Data Input Options")
+st.markdown("Choose to either **upload a CSV** or **enter data manually** for your monthly energy usage.")
 
-# Template download
-template_df = pd.DataFrame({
-    "Month": ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-    "Month_Num": list(range(1, 13)),
-    "Energy_kWh": [0.0] * 12,
-    "Avg_Temp": [25.0] * 12,
-    "Humidity": [50.0] * 12,
-    "Occupancy_%": [75] * 12,
-    "HVAC_%": [40] * 12,
-    "Lighting_%": [30] * 12,
-    "Machinery_%": [30] * 12
-})
-csv_buffer = io.StringIO()
-template_df.to_csv(csv_buffer, index=False)
-st.download_button("Download CSV Template", data=csv_buffer.getvalue(), file_name="energy_input_template.csv", mime="text/csv")
+with st.expander("📤 Upload CSV File"):
+    st.markdown("Download and fill the CSV template, then upload below.")
+    csv_buffer = io.StringIO()
+    template_df.to_csv(csv_buffer, index=False)
+    st.download_button("⬇️ Download CSV Template", data=csv_buffer.getvalue(), file_name="energy_input_template.csv", mime="text/csv")
+    uploaded_file = st.file_uploader("Upload your completed CSV file", type=["csv"])
 
-# Upload CSV
-uploaded_file = st.file_uploader("Upload your completed CSV file", type=["csv"])
-# Expected columns in uploaded CSV
-REQUIRED_COLUMNS = ["Month", "Month_Num", "Energy_kWh", "Avg_Temp", "Humidity", 
-                    "Occupancy_%", "HVAC_%", "Lighting_%", "Machinery_%"]
+st.markdown("### OR")
 
-uploaded_file = st.file_uploader("Upload CSV file with energy data", type=["csv"])
+st.markdown("## ✍️ Manual Entry (Optional if no CSV)")
 
-df = None  # Initialize DataFrame
-
-if uploaded_file:
-    df_uploaded = pd.read_csv(uploaded_file)
-    
-    # Check for missing columns
-    missing_cols = [col for col in REQUIRED_COLUMNS if col not in df_uploaded.columns]
-    
-    if missing_cols:
-        st.error(f"Uploaded CSV is missing the following required column(s): {', '.join(missing_cols)}")
-        st.stop()
-    else:
-        df = df_uploaded.copy()
-        st.success("✅ CSV uploaded and validated successfully.")
-
-if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file)
-    st.success("CSV Uploaded Successfully!")
-    st.dataframe(df)
-else:
-    st.markdown("### Option 2: Enter data manually below")
-    
-    # Manual data entry
-    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     input_data = []
 
     for i in range(12):
@@ -202,29 +163,49 @@ ineff_areas = {
 top_ineff = max(ineff_areas, key=ineff_areas.get)
 
     # Display output
-    st.dataframe(df)
+    st.markdown("### 🧠 AI Recommendations")
+
+for i, row in df.iterrows():
+    st.markdown(f"""
+    <div style='border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 8px; background-color: #f9f9f9;'>
+        <b>{row['Month']}</b>: {row['Smart_Recommendation']}<br>
+        <i>Efficiency Score: {row['Efficiency_Score']}%</i>
+    </div>
+    """, unsafe_allow_html=True)
+
 
     # Charts
-    st.subheader("Visualization")
+   st.subheader("📊 Visualization")
 
-    col1, col2 = st.columns(2)
+col1, col2 = st.columns(2)
 
-    with col1:
-        st.bar_chart(df[["Month", "Energy_kWh"]].set_index("Month"))
-        st.bar_chart(df[["Month", "Predicted_Energy"]].set_index("Month"))
+with col1:
+    st.markdown("#### 🔋 Energy Consumption (Actual vs Predicted)")
+    st.line_chart(df[["Month", "Energy_kWh", "Predicted_Energy"]].set_index("Month"))
 
-    with col2:
-        fig, ax = plt.subplots(figsize=(8, 4))
-        colors = df["Efficiency_Score"].apply(lambda x: 'green' if x > 100 else ('orange' if x >= 90 else 'red'))
-        ax.bar(df["Month"], df["Efficiency_Score"], color=colors)
-        ax.axhline(100, color='black', linestyle='--', linewidth=1)
-        ax.set_ylabel("Efficiency Score (%)")
-        ax.set_title("Monthly Energy Efficiency")
-        st.pyplot(fig)
-        st.line_chart(df[["Month", "Cost_INR", "Predicted_Cost"]].set_index("Month"))
+with col2:
+    st.markdown("#### 💰 Energy Cost (Actual vs Predicted)")
+    st.line_chart(df[["Month", "Cost_INR", "Predicted_Cost"]].set_index("Month"))
+
+    st.markdown("#### ⚡️ Monthly Efficiency Score")
+fig, ax = plt.subplots(figsize=(8, 4))
+colors = df["Efficiency_Score"].apply(lambda x: 'green' if x > 100 else ('orange' if x >= 90 else 'red'))
+ax.bar(df["Month"], df["Efficiency_Score"], color=colors)
+ax.axhline(100, color='black', linestyle='--', linewidth=1)
+ax.set_ylabel("Efficiency Score (%)")
+ax.set_title("Monthly Energy Efficiency")
+st.pyplot(fig)
+
 
     # Summary
     st.subheader("AI Summary Report")
+    st.markdown("### ⚙️ Key Performance Indicators (KPIs)")
+     kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+     kpi1.metric("📊 Avg Monthly Energy", f"{monthly_avg:.2f} kWh")
+     kpi2.metric("💸 Avg Monthly Cost", f"₹{df['Cost_INR'].mean():.2f}")
+     kpi3.metric("🌿 Total CO₂ Emitted", f"{df['CO2_kg'].sum():.2f} kg")
+     kpi4.metric("🔺 Peak Load Month", f"{peak_month}")
+
     st.markdown(f"**Peak Load Month:** {peak_month}")
     st.markdown(f"**Average Energy Usage:** {monthly_avg:.2f} kWh")
     st.markdown(f"**Average Monthly Cost:** ₹{df['Cost_INR'].mean():.2f}")
