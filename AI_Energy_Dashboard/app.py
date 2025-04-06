@@ -71,39 +71,39 @@ else:
 
     for i in range(12):
        with st.expander(f"Month: {months[i]}"):
-    energy = st.number_input(f"Energy used (kWh) - {months[i]}", min_value=0.0, value=0.0, key=f"e_{i}")
-    avg_temp = st.number_input(f"Outdoor Temp (°C) - {months[i]}", value=30.0, key=f"t_{i}")
-    indoor_temp = st.number_input(f"Indoor Temp (°C) - {months[i]}", value=24.0, key=f"indoor_{i}")
-    humidity = st.number_input(f"Humidity (%) - {months[i]}", value=50.0, key=f"h_{i}")
-    occupancy = st.slider(f"Occupancy (%) - {months[i]}", 0, 100, 75, key=f"o_{i}")
+            energy = st.number_input(f"Energy used (kWh) - {months[i]}", min_value=0.0, value=0.0, key=f"e_{i}")
+            avg_temp = st.number_input(f"Outdoor Temp (°C) - {months[i]}", value=30.0, key=f"t_{i}")
+            indoor_temp = st.number_input(f"Indoor Temp (°C) - {months[i]}", value=24.0, key=f"indoor_{i}")
+            humidity = st.number_input(f"Humidity (%) - {months[i]}", value=50.0, key=f"h_{i}")
+            occupancy = st.slider(f"Occupancy (%) - {months[i]}", 0, 100, 75, key=f"o_{i}")
     
-    hvac = st.slider(f"HVAC Usage (%) - {months[i]}", 0, 100, 40, key=f"hvac_{i}")
-    lighting = st.slider(f"Lighting Usage (%) - {months[i]}", 0, 100, 30, key=f"light_{i}")
-    machinery = st.slider(f"Machinery Usage (%) - {months[i]}", 0, 100, 30, key=f"mach_{i}")
+            hvac = st.slider(f"HVAC Usage (%) - {months[i]}", 0, 100, 40, key=f"hvac_{i}")
+            lighting = st.slider(f"Lighting Usage (%) - {months[i]}", 0, 100, 30, key=f"light_{i}")
+            machinery = st.slider(f"Machinery Usage (%) - {months[i]}", 0, 100, 30, key=f"mach_{i}")
     
     # Live cost estimate
-    month_cost = energy * TARIFF
-    st.markdown(f"**Estimated Monthly Cost:** ₹{month_cost:.2f}")
+            month_cost = energy * TARIFF
+            st.markdown(f"**Estimated Monthly Cost:** ₹{month_cost:.2f}")
 
     # Live usage breakdown chart
-    usage_pie = pd.DataFrame({
-        'Category': ['HVAC', 'Lighting', 'Machinery'],
+            usage_pie = pd.DataFrame({
+            'Category': ['HVAC', 'Lighting', 'Machinery'],
         'Usage %': [hvac, lighting, machinery]
     })
-    st.markdown("**Usage Distribution**")
-    st.pyplot(plt.figure(figsize=(3.5, 3.5)))
-    plt.pie(usage_pie["Usage %"], labels=usage_pie["Category"], autopct='%1.1f%%', startangle=90)
-    plt.axis("equal")
-    plt.tight_layout()
-    plt.show()
+            st.markdown("**Usage Distribution**")
+            st.pyplot(plt.figure(figsize=(3.5, 3.5)))
+            plt.pie(usage_pie["Usage %"], labels=usage_pie["Category"], autopct='%1.1f%%', startangle=90)
+            plt.axis("equal")
+            plt.tight_layout()
+            plt.show()
 
     # Append new indoor_temp to data
-    input_data.append([months[i], i+1, energy, avg_temp, indoor_temp, humidity, occupancy, hvac, lighting, machinery])
+            input_data.append([months[i], i+1, energy, avg_temp, indoor_temp, humidity, occupancy, hvac, lighting, machinery])
 
-    df = pd.DataFrame(input_data, columns=["Month", "Month_Num", "Energy_kWh", "Avg_Temp", "Indoor_Temp", "Humidity", "Occupancy_%", "HVAC_%", "Lighting_%", "Machinery_%"])
-df["Temp_Delta"] = df["Indoor_Temp"] - df["Avg_Temp"]
-df["Cost_INR"] = df["Energy_kWh"] * TARIFF
-df["CO2_kg"] = df["Energy_kWh"] * CO2_PER_KWH
+            df = pd.DataFrame(input_data, columns=["Month", "Month_Num", "Energy_kWh", "Avg_Temp", "Indoor_Temp", "Humidity", "Occupancy_%", "HVAC_%", "Lighting_%", "Machinery_%"])
+            df["Temp_Delta"] = df["Indoor_Temp"] - df["Avg_Temp"]
+            df["Cost_INR"] = df["Energy_kWh"] * TARIFF
+            df["CO2_kg"] = df["Energy_kWh"] * CO2_PER_KWH
 
 if st.button("Run AI Analysis"):
     st.success("AI Analysis Complete")
