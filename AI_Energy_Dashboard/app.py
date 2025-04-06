@@ -29,7 +29,7 @@ st.markdown("### OR")
 st.markdown("## ✍️ Manual Entry (Optional if no CSV)")
 input_data = []
 
-    for i in range(12):
+for i in range(12):
        with st.expander(f"Month: {months[i]}"):
             energy = st.number_input(f"Energy used (kWh) - {months[i]}", min_value=0.0, value=0.0, key=f"e_{i}")
             avg_temp = st.number_input(f"Outdoor Temp (°C) - {months[i]}", value=30.0, key=f"t_{i}")
