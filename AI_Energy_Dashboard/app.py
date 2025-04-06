@@ -174,7 +174,7 @@ for i, row in df.iterrows():
 
 
     # Charts
-   st.subheader("📊 Visualization")
+st.subheader("📊 Visualization")
 
 col1, col2 = st.columns(2)
 
@@ -197,8 +197,8 @@ st.pyplot(fig)
 
 
     # Summary
-    st.subheader("AI Summary Report")
-    st.markdown("### ⚙️ Key Performance Indicators (KPIs)")
+st.subheader("AI Summary Report")
+st.markdown("### ⚙️ Key Performance Indicators (KPIs)")
      kpi1, kpi2, kpi3, kpi4 = st.columns(4)
      kpi1.metric("📊 Avg Monthly Energy", f"{monthly_avg:.2f} kWh")
      kpi2.metric("💸 Avg Monthly Cost", f"₹{df['Cost_INR'].mean():.2f}")
