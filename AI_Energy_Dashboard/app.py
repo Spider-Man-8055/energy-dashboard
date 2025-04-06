@@ -197,7 +197,7 @@ st.pyplot(fig)
 
 
     # Summary
-     st.subheader("AI Summary Report")
+st.subheader("AI Summary Report")
      st.markdown("### ⚙️ Key Performance Indicators (KPIs)")
      kpi1, kpi2, kpi3, kpi4 = st.columns(4)
      kpi1.metric("📊 Avg Monthly Energy", f"{monthly_avg:.2f} kWh")
@@ -205,11 +205,11 @@ st.pyplot(fig)
      kpi3.metric("🌿 Total CO₂ Emitted", f"{df['CO2_kg'].sum():.2f} kg")
      kpi4.metric("🔺 Peak Load Month", f"{peak_month}")
 
-    st.markdown(f"**Peak Load Month:** {peak_month}")
-    st.markdown(f"**Average Energy Usage:** {monthly_avg:.2f} kWh")
-    st.markdown(f"**Average Monthly Cost:** ₹{df['Cost_INR'].mean():.2f}")
-    st.markdown(f"**Total CO₂ Emissions (kg):** {df['CO2_kg'].sum():.2f}")
-    st.markdown(f"**Highest Efficiency Score:** {df['Efficiency_Score'].max():.2f}")
+     st.markdown(f"**Peak Load Month:** {peak_month}")
+     st.markdown(f"**Average Energy Usage:** {monthly_avg:.2f} kWh")
+     st.markdown(f"**Average Monthly Cost:** ₹{df['Cost_INR'].mean():.2f}")
+     st.markdown(f"**Total CO₂ Emissions (kg):** {df['CO2_kg'].sum():.2f}")
+     st.markdown(f"**Highest Efficiency Score:** {df['Efficiency_Score'].max():.2f}")
           # Identify months with low efficiency
 low_eff_months = df[df["Efficiency_Score"] < 90]["Month"].tolist()
 
