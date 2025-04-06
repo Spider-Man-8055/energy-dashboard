@@ -27,8 +27,7 @@ with st.expander("📤 Upload CSV File"):
 st.markdown("### OR")
 
 st.markdown("## ✍️ Manual Entry (Optional if no CSV)")
-
-    input_data = []
+input_data = []
 
     for i in range(12):
        with st.expander(f"Month: {months[i]}"):
