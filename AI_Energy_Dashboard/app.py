@@ -1,89 +1,66 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="AI-Powered Energy Dashboard", layout="wide")
+st.set_page_config(page_title="Manual Energy Dashboard", layout="wide")
+st.title("Manual Input - AI Energy Optimizer Dashboard")
 
-st.title("⚡ AI Energy Management Dashboard")
-st.markdown("This AI dashboard helps predict energy usage, estimate costs, and generate smart energy-saving tips.")
+months = ['January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December']
 
-# File uploader
-uploaded_file = st.file_uploader("📂 Upload your monthly energy CSV file", type=["csv"])
+# Collect inputs for each month
+data = []
+st.subheader("Enter Monthly Energy Data (Manually)")
 
-if uploaded_file:
-    df = pd.read_csv(uploaded_file)
+for i, month in enumerate(months):
+    with st.expander(f"{month}"):
+        energy = st.number_input(f"{month} - Energy (kWh)", min_value=0.0, step=0.1, key=f"energy_{i}")
+        cost = st.number_input(f"{month} - Cost (INR)", min_value=0.0, step=0.1, key=f"cost_{i}")
+        temp = st.number_input(f"{month} - Avg Temperature (°C)", min_value=0.0, step=0.1, key=f"temp_{i}")
+        humidity = st.number_input(f"{month} - Humidity (%)", min_value=0.0, max_value=100.0, step=0.1, key=f"humidity_{i}")
+        occupancy = st.slider(f"{month} - Occupancy (%)", min_value=0, max_value=100, value=80, key=f"occupancy_{i}")
+        data.append([month, i+1, energy, cost, temp, humidity, occupancy])
 
-    st.subheader("📊 Raw Uploaded Data")
+# Create DataFrame
+columns = ["Month", "Month_Num", "Energy_kWh", "Cost_INR", "Avg_Temp", "Humidity", "Occupancy_%"]
+df = pd.DataFrame(data, columns=columns)
+
+if st.button("Run AI Energy Analysis"):
+    st.subheader("Raw Data")
     st.dataframe(df)
 
-    # Features
-    try:
-        X = df[["Month_Num", "Avg_Temp", "Humidity", "Occupancy_%"]]
-        y = df["Energy_kWh"]
-    except KeyError:
-        st.error("❌ Required columns: ['Month_Num', 'Avg_Temp', 'Humidity', 'Occupancy_%', 'Energy_kWh']")
-    else:
-        # Train model
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-        model = RandomForestRegressor(n_estimators=200, max_depth=10, random_state=42)
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
+    # Model input
+    X = df[["Month_Num", "Avg_Temp", "Humidity", "Occupancy_%"]]
+    y = df["Energy_kWh"]
 
-        # Evaluation
-        mae = mean_absolute_error(y_test, y_pred)
-        rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-        r2 = r2_score(y_test, y_pred)
+    # Train model
+    model = RandomForestRegressor(n_estimators=200, random_state=42)
+    model.fit(X, y)
+    df["Predicted_Energy_kWh"] = model.predict(X)
 
-        st.subheader("📈 Model Evaluation")
-        st.write(f"**MAE**: {mae:.2f} kWh")
-        st.write(f"**RMSE**: {rmse:.2f} kWh")
-        st.write(f"**R² Score**: {r2:.2f}")
+    # Metrics
+    st.subheader("Model Accuracy (Trained on Input Data)")
+    st.write(f"MAE: {mean_absolute_error(y, df['Predicted_Energy_kWh']):.2f}")
+    st.write(f"MSE: {mean_squared_error(y, df['Predicted_Energy_kWh']):.2f}")
+    st.write(f"R² Score: {r2_score(y, df['Predicted_Energy_kWh']):.2f}")
 
-        # Plot prediction vs actual
-        st.subheader("📉 Actual vs Predicted Energy Usage")
-        fig, ax = plt.subplots()
-        ax.plot(y_test.values, label="Actual", marker="o")
-        ax.plot(y_pred, label="Predicted", marker="x")
-        ax.set_xlabel("Test Samples")
-        ax.set_ylabel("Energy (kWh)")
-        ax.legend()
-        st.pyplot(fig)
+    # Charts
+    st.subheader("Actual vs Predicted Energy Usage")
+    st.line_chart(df[["Energy_kWh", "Predicted_Energy_kWh"]])
 
-        # AI Insights
-        st.subheader("💡 AI Energy-Saving Suggestions")
-
-        importances = model.feature_importances_
-        features = X.columns
-        sorted_indices = importances.argsort()[::-1]
-
-        for i in sorted_indices:
-            if features[i] == "Occupancy_%":
-                st.write("- Optimize high occupancy periods with energy zoning.")
-            elif features[i] == "Avg_Temp":
-                st.write("- Control HVAC more efficiently during hotter months.")
-            elif features[i] == "Humidity":
-                st.write("- Use dehumidifiers or ventilation to reduce excess humidity load.")
-            elif features[i] == "Month_Num":
-                st.write("- Adjust energy settings seasonally to avoid peak load.")
-
-        # Forecast next 3 months
-        st.subheader("🔮 Future Forecast (Next 3 Months)")
-
-        future_data = pd.DataFrame({
-            "Month_Num": [13, 14, 15],
-            "Avg_Temp": [32, 34, 35],
-            "Humidity": [55, 60, 58],
-            "Occupancy_%": [85, 90, 88]
-        })
-
-        future_prediction = model.predict(future_data)
-
-        future_df = future_data.copy()
-        future_df["Predicted_Energy_kWh"] = future_prediction
-        st.dataframe(future_df)
-
-        st.success("✅ AI model executed and optimized successfully!")
+    # AI Recommendations
+    st.subheader("AI-Powered Energy Recommendations")
+    for idx, row in df.iterrows():
+        suggestions = []
+        if row["Occupancy_%"] > 90:
+            suggestions.append("Consider optimizing HVAC systems in highly occupied areas.")
+        if row["Humidity"] > 70:
+            suggestions.append("Dehumidifiers can improve AC efficiency.")
+        if row["Avg_Temp"] > 30:
+            suggestions.append("Use shading or insulation to reduce cooling load.")
+        if not suggestions:
+            suggestions.append("Energy performance looks good this month.")
+        st.markdown(f"**{row['Month']}**: {' | '.join(suggestions)}")
