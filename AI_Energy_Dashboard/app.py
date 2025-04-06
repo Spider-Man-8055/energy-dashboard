@@ -93,7 +93,7 @@ if st.button("Run AI Analysis"):
 
     # Smart Recommendations
     def get_recommendation(row):
-    recommendations = []
+        recommendations = []
 
     # Constants for potential savings
     reduction_percent = 20  # Assume 20% reduction possible
