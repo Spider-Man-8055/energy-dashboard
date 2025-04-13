@@ -152,3 +152,17 @@ if uploaded_file is not None:
             low_eff_months = df[df["Efficiency_Score"] < 90]["Month"].tolist()
             if low_eff_months:
                 st.markdown(f"**Months with Low Efficiency (<90%)**: {', '.join(low_eff_months)}")
+            else:
+                st.markdown("**All months have good energy efficiency.**")
+
+            inefficient_df = df[df["Efficiency_Score"] < 90]
+            inefficient_df["Energy_Saved"] = inefficient_df["Energy_kWh"] - inefficient_df["Predicted_Energy"]
+            total_savings = inefficient_df["Energy_Saved"].sum()
+            st.markdown(f"**Potential Energy Savings from Optimization:** {total_savings:.2f} kWh")
+
+            st.markdown(f"**Total Estimated Cost Savings:** ₹{total_cost_saved:.2f}")
+            st.markdown(f"**Total Estimated CO₂ Saved:** {total_co2_saved:.2f} kg")
+
+            st.markdown(f"**Areas Needing Improvement**: {top_ineff} optimization")
+    else:
+        st.error("Missing or incorrect columns in the uploaded CSV file.")
