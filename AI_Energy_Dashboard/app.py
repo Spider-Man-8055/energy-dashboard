@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
-import matplotlib.pyplot as plt
 import io
 
 # Constants
@@ -29,96 +28,106 @@ with st.expander("📝 Manually Enter Data"):
     
     months_input = st.selectbox("Month", months, index=0)
     month_num = months.index(months_input) + 1
-    energy_kwh = st.number_input("Energy Consumption (kWh)", min_value=0, step=1)
-    avg_temp = st.number_input("Average Temperature (°C)", min_value=-50, step=0.1)
-    indoor_temp = st.number_input("Indoor Temperature (°C)", min_value=-50, step=0.1)
-    humidity = st.number_input("Humidity (%)", min_value=0, max_value=100, step=1)
-    occupancy = st.number_input("Occupancy (%)", min_value=0, max_value=100, step=1)
-    hvac = st.number_input("HVAC Usage (%)", min_value=0, max_value=100, step=1)
-    lighting = st.number_input("Lighting Usage (%)", min_value=0, max_value=100, step=1)
-    machinery = st.number_input("Machinery Usage (%)", min_value=0, max_value=100, step=1)
 
-    if st.button("Run AI Analysis (Manual Input)"):
-        manual_data = {
-            "Month": [months_input],
-            "Month_Num": [month_num],
-            "Energy_kWh": [energy_kwh],
-            "Avg_Temp": [avg_temp],
-            "Indoor_Temp": [indoor_temp],
-            "Humidity": [humidity],
-            "Occupancy_%": [occupancy],
-            "HVAC_%": [hvac],
-            "Lighting_%": [lighting],
-            "Machinery_%": [machinery]
-        }
+    try:
+        energy_kwh = st.number_input("Energy Consumption (kWh)", min_value=0, step=1)
+        avg_temp = st.number_input("Average Temperature (°C)", min_value=-50.0, step=0.1)
+        indoor_temp = st.number_input("Indoor Temperature (°C)", min_value=-50.0, step=0.1)
+        humidity = st.number_input("Humidity (%)", min_value=0, max_value=100, step=1)
+        occupancy = st.number_input("Occupancy (%)", min_value=0, max_value=100, step=1)
+        hvac = st.number_input("HVAC Usage (%)", min_value=0, max_value=100, step=1)
+        lighting = st.number_input("Lighting Usage (%)", min_value=0, max_value=100, step=1)
+        machinery = st.number_input("Machinery Usage (%)", min_value=0, max_value=100, step=1)
 
-        df = pd.DataFrame(manual_data)
-        df["Temp_Delta"] = df["Indoor_Temp"] - df["Avg_Temp"]
-        df["Cost_INR"] = df["Energy_kWh"] * TARIFF
-        df["CO2_kg"] = df["Energy_kWh"] * CO2_PER_KWH
+        if st.button("Run AI Analysis (Manual Input)"):
 
-        st.success("AI Analysis from Manual Input Complete")
+            # Check if the input values are valid and non-zero
+            if any(value == 0 for value in [energy_kwh, avg_temp, indoor_temp, humidity, occupancy, hvac, lighting, machinery]):
+                st.error("Please make sure all values are entered correctly (no zero values).")
+            else:
+                manual_data = {
+                    "Month": [months_input],
+                    "Month_Num": [month_num],
+                    "Energy_kWh": [energy_kwh],
+                    "Avg_Temp": [avg_temp],
+                    "Indoor_Temp": [indoor_temp],
+                    "Humidity": [humidity],
+                    "Occupancy_%": [occupancy],
+                    "HVAC_%": [hvac],
+                    "Lighting_%": [lighting],
+                    "Machinery_%": [machinery]
+                }
 
-        X = df[["Month_Num", "Temp_Delta", "Humidity", "Occupancy_%", "HVAC_%", "Lighting_%", "Machinery_%"]]
-        y = df["Energy_kWh"]
+                df = pd.DataFrame(manual_data)
+                df["Temp_Delta"] = df["Indoor_Temp"] - df["Avg_Temp"]
+                df["Cost_INR"] = df["Energy_kWh"] * TARIFF
+                df["CO2_kg"] = df["Energy_kWh"] * CO2_PER_KWH
 
-        model = RandomForestRegressor(n_estimators=100, random_state=42)
-        model.fit(X, y)
+                st.success("AI Analysis from Manual Input Complete")
 
-        df["Predicted_Energy"] = model.predict(X)
-        df["Predicted_Cost"] = df["Predicted_Energy"] * TARIFF
-        df["Efficiency_Score"] = np.round((df["Predicted_Energy"] / df["Energy_kWh"]) * 100, 2)
+                X = df[["Month_Num", "Temp_Delta", "Humidity", "Occupancy_%", "HVAC_%", "Lighting_%", "Machinery_%"]]
+                y = df["Energy_kWh"]
 
-        # Recommendations, CO2 savings, and energy savings logic
-        def get_recommendation(row):
-            recommendations = []
-            reduction_percent = 20
-            energy_base = row["Energy_kWh"]
+                model = RandomForestRegressor(n_estimators=100, random_state=42)
+                model.fit(X, y)
 
-            def savings(est_usage_percent):
-                reduction = est_usage_percent * (reduction_percent / 100)
-                energy_saving_kwh = energy_base * (reduction / 100)
-                cost_saving = energy_saving_kwh * TARIFF
-                co2_saving = energy_saving_kwh * CO2_PER_KWH
-                return cost_saving, co2_saving
+                df["Predicted_Energy"] = model.predict(X)
+                df["Predicted_Cost"] = df["Predicted_Energy"] * TARIFF
+                df["Efficiency_Score"] = np.round((df["Predicted_Energy"] / df["Energy_kWh"]) * 100, 2)
 
-            if row["HVAC_%"] > 50:
-                cost, co2 = savings(row["HVAC_%"])
-                recommendations.append(f"Optimize HVAC (Save ₹{cost:.0f}, {co2:.1f} kg CO₂/month)")
+                # Recommendations, CO2 savings, and energy savings logic
+                def get_recommendation(row):
+                    recommendations = []
+                    reduction_percent = 20
+                    energy_base = row["Energy_kWh"]
 
-            if row["Lighting_%"] > 50:
-                cost, co2 = savings(row["Lighting_%"])
-                recommendations.append(f"Switch to efficient lighting (Save ₹{cost:.0f}, {co2:.1f} kg CO₂/month)")
+                    def savings(est_usage_percent):
+                        reduction = est_usage_percent * (reduction_percent / 100)
+                        energy_saving_kwh = energy_base * (reduction / 100)
+                        cost_saving = energy_saving_kwh * TARIFF
+                        co2_saving = energy_saving_kwh * CO2_PER_KWH
+                        return cost_saving, co2_saving
 
-            if row["Machinery_%"] > 50:
-                cost, co2 = savings(row["Machinery_%"])
-                recommendations.append(f"Improve machinery scheduling (Save ₹{cost:.0f}, {co2:.1f} kg CO₂/month)")
+                    if row["HVAC_%"] > 50:
+                        cost, co2 = savings(row["HVAC_%"])
+                        recommendations.append(f"Optimize HVAC (Save ₹{cost:.0f}, {co2:.1f} kg CO₂/month)")
 
-            if row["Efficiency_Score"] < 85:
-                recommendations.append("Consider energy audits for process optimization")
+                    if row["Lighting_%"] > 50:
+                        cost, co2 = savings(row["Lighting_%"])
+                        recommendations.append(f"Switch to efficient lighting (Save ₹{cost:.0f}, {co2:.1f} kg CO₂/month)")
 
-            return "; ".join(recommendations) if recommendations else "All systems operating efficiently"
+                    if row["Machinery_%"] > 50:
+                        cost, co2 = savings(row["Machinery_%"])
+                        recommendations.append(f"Improve machinery scheduling (Save ₹{cost:.0f}, {co2:.1f} kg CO₂/month)")
 
-        df["Smart_Recommendation"] = df.apply(get_recommendation, axis=1)
+                    if row["Efficiency_Score"] < 85:
+                        recommendations.append("Consider energy audits for process optimization")
 
-        st.markdown("### 🧠 AI Recommendations")
-        st.write(df[["Month", "Smart_Recommendation"]])
+                    return "; ".join(recommendations) if recommendations else "All systems operating efficiently"
 
-        st.markdown("### 📊 Visualization")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("#### 🔋 Energy Consumption (Actual vs Predicted)")
-            st.line_chart(df[["Month", "Energy_kWh", "Predicted_Energy"]].set_index("Month"))
-        with col2:
-            st.markdown("#### 💰 Energy Cost (Actual vs Predicted)")
-            st.line_chart(df[["Month", "Cost_INR", "Predicted_Cost"]].set_index("Month"))
+                df["Smart_Recommendation"] = df.apply(get_recommendation, axis=1)
 
-        st.markdown("### ⚙️ Key Performance Indicators (KPIs)")
-        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-        kpi1.metric("📊 Avg Monthly Energy", f"{df['Energy_kWh'].mean():.2f} kWh")
-        kpi2.metric("💸 Avg Monthly Cost", f"₹{df['Cost_INR'].mean():.2f}")
-        kpi3.metric("🌿 Total CO₂ Emissions", f"{df['CO2_kg'].sum():.2f} kg")
-        kpi4.metric("🔺 Efficiency Score", f"{df['Efficiency_Score'].max():.2f} %")
+                st.markdown("### 🧠 AI Recommendations")
+                st.write(df[["Month", "Smart_Recommendation"]])
+
+                st.markdown("### 📊 Visualization")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown("#### 🔋 Energy Consumption (Actual vs Predicted)")
+                    st.line_chart(df[["Month", "Energy_kWh", "Predicted_Energy"]].set_index("Month"))
+                with col2:
+                    st.markdown("#### 💰 Energy Cost (Actual vs Predicted)")
+                    st.line_chart(df[["Month", "Cost_INR", "Predicted_Cost"]].set_index("Month"))
+
+                st.markdown("### ⚙️ Key Performance Indicators (KPIs)")
+                kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+                kpi1.metric("📊 Avg Monthly Energy", f"{df['Energy_kWh'].mean():.2f} kWh")
+                kpi2.metric("💸 Avg Monthly Cost", f"₹{df['Cost_INR'].mean():.2f}")
+                kpi3.metric("🌿 Total CO₂ Emissions", f"{df['CO2_kg'].sum():.2f} kg")
+                kpi4.metric("🔺 Efficiency Score", f"{df['Efficiency_Score'].max():.2f} %")
+
+    except ValueError as e:
+        st.error(f"Invalid input detected: {e}")
 
 # Handle CSV file upload
 if uploaded_file is not None:
