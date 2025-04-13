@@ -21,15 +21,15 @@ def run_ai_energy_analysis(df):
            model = RandomForestRegressor(n_estimators=100, random_state=42)
            model.fit(X, y)
 
-            df["Predicted_Energy"] = model.predict(X)
-            df["Predicted_Cost"] = df["Predicted_Energy"] * TARIFF
-            df["Efficiency_Score"] = np.round((df["Predicted_Energy"] / df["Energy_kWh"]) * 100, 2)
+           df["Predicted_Energy"] = model.predict(X)
+           df["Predicted_Cost"] = df["Predicted_Energy"] * TARIFF
+           df["Efficiency_Score"] = np.round((df["Predicted_Energy"] / df["Energy_kWh"]) * 100, 2)
 
-            peak_month = df.loc[df["Energy_kWh"].idxmax(), "Month"]
-            monthly_avg = df["Energy_kWh"].mean()
-            df["Benchmarking"] = df["Energy_kWh"].apply(lambda x: "Above Average" if x > monthly_avg else "Below Average")
+           peak_month = df.loc[df["Energy_kWh"].idxmax(), "Month"]
+           monthly_avg = df["Energy_kWh"].mean()
+           df["Benchmarking"] = df["Energy_kWh"].apply(lambda x: "Above Average" if x > monthly_avg else "Below Average")
 
-            def get_recommendation(row):
+           def get_recommendation(row):
                 recommendations = []
                 reduction_percent = 20
                 energy_base = row["Energy_kWh"]
@@ -88,15 +88,12 @@ def run_ai_energy_analysis(df):
             # === Dashboard Output (Reused from Manual Input Block) ===
             st.markdown("### 🧠 AI Recommendations")
             for i, row in df.iterrows():
-                st.markdown(f"""
-                <div style='border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 8px; background-color: #f9f9f9;'>
+                st.markdown(f"""<div style='border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 8px; background-color: #f9f9f9;'>
                     <b>{row['Month']}</b>: {row['Smart_Recommendation']}<br>
-                    <i>Efficiency Score: {row['Efficiency_Score']}%</i>
-                </div>
-                """, unsafe_allow_html=True)
+                    <i>Efficiency Score: {row['Efficiency_Score']}%</i></div>""", unsafe_allow_html=True)
 
 
-    return df
+            return df, monthly_avg, peak_month, top_ineff, total_cost_saved, total_co2_saved
 st.markdown("## 📁 Data Input Options")
 with st.expander("📤 Upload CSV File"):
     csv_buffer = io.StringIO()
@@ -110,10 +107,11 @@ if uploaded_file is not None:
         df["Temp_Delta"] = df["Indoor_Temp"] - df["Avg_Temp"]
         df["Cost_INR"] = df["Energy_kWh"] * TARIFF
         df["CO2_kg"] = df["Energy_kWh"] * CO2_PER_KWH
-        if st.button("Run Analysis"):
-             st.success("✅ AI analysis completed on uploaded data.")
+if st.button("💡 Run AI Energy Analysis"):
+    if 'df' in locals() and not df.empty:
     # Run AI analysis
-    df, monthly_avg = run_ai_energy_analysis(df)
+    df, monthly_avg, peak_month, top_ineff, total_cost_saved, total_co2_saved  = run_ai_energy_analysis(df)
+    st.success("✅ AI analysis completed on uploaded data.")
           #manually uploading section
     else:
         st.error("Uploaded CSV is missing one or more required columns.")
@@ -157,11 +155,11 @@ if input_data:
     df["Cost_INR"] = df["Energy_kWh"] * TARIFF
     df["CO2_kg"] = df["Energy_kWh"] * CO2_PER_KWH
 
-    if st.button("Run AI Analysis"):
-            st.success("✅ AI analysis completed on manual input.")
+if st.button("Run AI Analysis"):
     # Run AI analysis
-    df, monthly_avg  = run_ai_energy_analysis(df)
-if "Predicted_Energy" in df.columns:          
+    df, monthly_avg, peak_month, top_ineff, total_cost_saved, total_co2_saved = run_ai_energy_analysis(df)
+    st.success("✅ AI analysis completed on manual input.")
+if 'df' in locals() and "Predicted_Energy" in df.columns:          
         st.subheader("📊 Visualization")
         col1, col2 = st.columns(2)
         
@@ -209,6 +207,7 @@ if "Predicted_Energy" in df.columns:
             st.markdown("**All months have good energy efficiency.**")
 
         inefficient_df = df[df["Efficiency_Score"] < 90]
+        inefficient_df = inefficient_df.copy()  
         inefficient_df["Energy_Saved_kWh"] = inefficient_df["Energy_kWh"] - inefficient_df["Predicted_Energy"]
         inefficient_df["Cost_Saved_INR"] = inefficient_df["Energy_Saved_kWh"] * TARIFF
         inefficient_df["CO2_Saved_kg"] = inefficient_df["Energy_Saved_kWh"] * CO2_PER_KWH
