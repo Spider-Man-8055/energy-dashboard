@@ -18,8 +18,8 @@ def run_ai_energy_analysis(df):
            X = df[["Year", "Month_Num", "Temp_Delta", "Humidity", "Occupancy_%", "HVAC_%", "Lighting_%", "Machinery_%"]]
            y = df["Energy_kWh"]
 
-            model = RandomForestRegressor(n_estimators=100, random_state=42)
-            model.fit(X, y)
+           model = RandomForestRegressor(n_estimators=100, random_state=42)
+           model.fit(X, y)
 
             df["Predicted_Energy"] = model.predict(X)
             df["Predicted_Cost"] = df["Predicted_Energy"] * TARIFF
@@ -113,7 +113,8 @@ if uploaded_file is not None:
         if st.button("Run Analysis"):
              st.success("✅ AI analysis completed on uploaded data.")
     # Run AI analysis
-    df = run_ai_energy_analysis(df)
+    df, monthly_avg = run_ai_energy_analysis(df)
+          #manually uploading section
     else:
         st.error("Uploaded CSV is missing one or more required columns.")
 
@@ -148,7 +149,7 @@ for i in range(12):
         ax1.axis("equal")
         st.pyplot(fig1)
 
-        input_data.append([months[i], i+1, energy, avg_temp, indoor_temp, humidity, occupancy, hvac, lighting, machinery])
+        input_data.append([selected_year, months[i], i+1, energy, avg_temp, indoor_temp, humidity, occupancy, hvac, lighting, machinery])
 
 if input_data:
     df = pd.DataFrame(input_data, columns=["Year", "Month", "Month_Num", "Energy_kWh", "Avg_Temp", "Indoor_Temp", "Humidity", "Occupancy_%", "HVAC_%", "Lighting_%", "Machinery_%"])
@@ -159,8 +160,8 @@ if input_data:
     if st.button("Run AI Analysis"):
             st.success("✅ AI analysis completed on manual input.")
     # Run AI analysis
-    df = run_ai_energy_analysis(df)
-          
+    df, monthly_avg  = run_ai_energy_analysis(df)
+if "Predicted_Energy" in df.columns:          
         st.subheader("📊 Visualization")
         col1, col2 = st.columns(2)
         
@@ -213,7 +214,7 @@ if input_data:
         inefficient_df["CO2_Saved_kg"] = inefficient_df["Energy_Saved_kWh"] * CO2_PER_KWH
 
         total_energy_saved = inefficient_df["Energy_Saved_kWh"].sum()
-        total_cost_saved = inefficient_df["Cost_Saved_INR"].sum()
+        estimated_cost_saving = inefficient_df["Cost_Saved_INR"].sum()
         total_co2_saved = inefficient_df["CO2_Saved_kg"].sum()
 
         if not inefficient_df.empty:
