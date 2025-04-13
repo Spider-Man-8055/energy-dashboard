@@ -175,7 +175,7 @@ if uploaded_file is not None:
         st.error("Uploaded CSV is missing one or more required columns.")
 
 st.markdown("### OR")
-st.markdown("## ✍️ Manual Entry (Optional if no CSV)")
+st.markdown("## ✍️ Manual Entry")
 input_data = []
 
 for i in range(12):
