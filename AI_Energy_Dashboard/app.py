@@ -100,7 +100,7 @@ def run_ai_energy_analysis(df):
 # 💡 SECTION: Inefficiency Detection
 # ============================================
 if 'Predicted_Energy' in df.columns:
-ineff_areas = {
+    ineff_areas = {
     "HVAC": df[df["HVAC_%"] > 50].shape[0],
     "Lighting": df[df["Lighting_%"] > 50].shape[0],
     "Machinery": df[df["Machinery_%"] > 50].shape[0]
