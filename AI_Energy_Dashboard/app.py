@@ -109,11 +109,11 @@ if 'df' in locals() and 'Predicted_Energy' in df.columns:
 # 🧠 SECTION: AI Recommendations Display
 # ============================================
 st.markdown("### 🧠 AI Recommendations")
-for i, row in df.iterrows():
-    st.markdown(f"""<div style='border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 8px; background-color: #f9f9f9;'>
-        <b>{row['Month']}</b>: {row['Smart_Recommendation']}<br>
-        <i>Efficiency Score: {row['Efficiency_Score']}%</i></div>""", unsafe_allow_html=True)
-
+if 'df' in locals() and not df.empty:
+    for i, row in df.iterrows():
+        st.markdown(f"""<div style='border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 8px; background-color: #f9f9f9;'>
+            <b>{row['Month']}</b>: {row['Smart_Recommendation']}<br>
+            <i>Efficiency Score: {row['Efficiency_Score']}%</i></div>""", unsafe_allow_html=True)
 
 # ============================================
 # 📊 SECTION: Visualizations (Energy & Cost)
