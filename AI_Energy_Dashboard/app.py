@@ -107,8 +107,11 @@ with st.expander("📄 Upload CSV File"):
         mime="text/csv"
     )
     uploaded = st.file_uploader("Upload your completed CSV file", type="csv")
-    if uploaded is not None:
-        df = pd.read_csv(uploaded)
+if uploaded is not None:
+    df = pd.read_csv(uploaded)
+    st.session_state.df_uploaded = df  # Save it in session state
+    st.success("✅ Data uploaded successfully.")
+
 
 # ─────────────── Manual Entry Section ───────────────
 st.markdown("### OR")
@@ -143,13 +146,13 @@ if rows:
     ])
 
 # ─────────────── Run Analysis Buttons ───────────────
-if st.button("💡 Run AI Analysis on Uploaded Data") and "df" in locals():
+if st.button("💡 Run AI Analysis on Uploaded Data") and "df_uploaded" in st.session_state:
     (st.session_state.df_analyzed,
      st.session_state.avg,
      st.session_state.peak,
      st.session_state.top_ineff,
      st.session_state.cost_saved,
-     st.session_state.co2_saved) = run_ai_energy_analysis(df)
+     st.session_state.co2_saved) = run_ai_energy_analysis(st.session_state.df_uploaded)
     st.success("✅ AI analysis completed on uploaded data.")
 
 if st.button("💡 Run AI Analysis on Manual Entry") and "df" in locals():
