@@ -121,26 +121,37 @@ with st.expander("📄 Upload CSV File"):
 st.markdown("### OR")
 st.markdown("## ✍️ Manual Entry")
 
-years = list(range(2000, 2031))
+years   = list(range(2000, 2031))
 sel_year = st.selectbox("Select Year", years)
-rows = []
-for i,m in enumerate(months):
+rows     = []
+
+for i, m in enumerate(months):
     with st.expander(f"Month: {m}"):
-        e   = st.number_input(f"Energy (kWh) - {m}",   value=0.0, key=f"e{i}")
-        at  = st.number_input(f"Outdoor Temp (°C) - {m}", value=30.0, key=f"t{o}{i}")
-        it  = st.number_input(f"Indoor Temp (°C) - {m}",  value=24.0, key=f"t{i}")
-        h   = st.number_input(f"Humidity (%) - {m}",     value=50.0, key=f"h{i}")
-        oc  = st.slider(f"Occupancy (%) - {m}",     0,100,75, key=f"oc{i}")
-        hv  = st.slider(f"HVAC Usage (%) - {m}",    0,100,40, key=f"hv{i}")
-        li  = st.slider(f"Lighting Usage (%) - {m}",0,100,30, key=f"li{i}")
-        ma  = st.slider(f"Machinery Usage (%) - {m}",0,100,30, key=f"ma{i}")
-        rows.append([sel_year,m,i+1,e,at,it,h,oc,hv,li,ma])
+        energy       = st.number_input(f"Energy (kWh) - {m}",   value=0.0, key=f"e_{i}")
+        outdoor_temp = st.number_input(f"Outdoor Temp (°C) - {m}", value=30.0, key=f"at_{i}")
+        indoor_temp  = st.number_input(f"Indoor Temp (°C) - {m}",  value=24.0, key=f"it_{i}")
+        humidity     = st.number_input(f"Humidity (%) - {m}",     value=50.0, key=f"h_{i}")
+        occupancy    = st.slider(f"Occupancy (%) - {m}", 0, 100, 75, key=f"oc_{i}")
+        hvac         = st.slider(f"HVAC Usage (%) - {m}", 0, 100, 40, key=f"hv_{i}")
+        lighting     = st.slider(f"Lighting Usage (%) - {m}", 0, 100, 30, key=f"li_{i}")
+        machinery    = st.slider(f"Machinery Usage (%) - {m}", 0, 100, 30, key=f"ma_{i}")
+
+        rows.append([
+            sel_year, m, i+1,
+            energy, outdoor_temp, indoor_temp,
+            humidity, occupancy, hvac,
+            lighting, machinery
+        ])
 
 if rows:
-    df = pd.DataFrame(rows, columns=[
-        "Year","Month","Month_Num","Energy_kWh","Avg_Temp",
-        "Indoor_Temp","Humidity","Occupancy_%","HVAC_%","Lighting_%","Machinery_%"
-    ])
+    df = pd.DataFrame(
+        rows,
+        columns=[
+            "Year", "Month", "Month_Num", "Energy_kWh", "Avg_Temp",
+            "Indoor_Temp", "Humidity", "Occupancy_%", "HVAC_%",
+            "Lighting_%", "Machinery_%"
+        ]
+    )
 
 # ─────────────── Run Analysis Buttons ───────────────
 if st.button("💡 Run AI Analysis on Uploaded Data") and "df" in locals():
