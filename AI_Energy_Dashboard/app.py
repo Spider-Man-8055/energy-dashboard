@@ -211,7 +211,7 @@ if 'df' in locals() and "Predicted_Energy" in df.columns:
 # === Upload CSV Section ===
 
 st.markdown("## 📁 Data Input Options")
-with st.expander("\ud83d\udcc4 Upload CSV File"):
+with st.expander("📄 Upload CSV File"):
     csv_buffer = io.StringIO()
     template_df.to_csv(csv_buffer, index=False)
     st.download_button("\u2b07\ufe0f Download CSV Template", data=csv_buffer.getvalue(), file_name="energy_input_template.csv", mime="text/csv")
