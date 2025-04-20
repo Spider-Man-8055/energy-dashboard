@@ -210,7 +210,7 @@ if 'df' in locals() and "Predicted_Energy" in df.columns:
 
 # === Upload CSV Section ===
 
-st.markdown("## \ud83d\udcc1 Data Input Options")
+st.markdown("## 📁 Data Input Options")
 with st.expander("\ud83d\udcc4 Upload CSV File"):
     csv_buffer = io.StringIO()
     template_df.to_csv(csv_buffer, index=False)
