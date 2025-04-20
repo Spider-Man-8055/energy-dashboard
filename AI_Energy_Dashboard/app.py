@@ -12,7 +12,7 @@ months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 template_df = pd.DataFrame(
-    columns=[ 
+    columns=[
         "Year", "Month", "Month_Num", "Energy_kWh", "Avg_Temp",
         "Indoor_Temp", "Humidity", "Occupancy_%", "HVAC_%",
         "Lighting_%", "Machinery_%"
@@ -38,19 +38,19 @@ def run_ai_energy_analysis(df):
 
     # Predictions & scores
     df["Predicted_Energy"] = model.predict(X)
-    df["Predicted_Cost"]   = df["Predicted_Energy"] * TARIFF
+    df["Predicted_Cost"] = df["Predicted_Energy"] * TARIFF
     df["Efficiency_Score"] = np.round((df["Predicted_Energy"] / df["Energy_kWh"]) * 100, 2)
 
     # Benchmarks & top inefficiency
-    peak_month  = df.loc[df["Energy_kWh"].idxmax(), "Month"]
+    peak_month = df.loc[df["Energy_kWh"].idxmax(), "Month"]
     monthly_avg = df["Energy_kWh"].mean()
     df["Benchmarking"] = df["Energy_kWh"].apply(
         lambda x: "Above Average" if x > monthly_avg else "Below Average"
     )
 
     ineff_areas = {
-        "HVAC":      (df["HVAC_%"] > 50).sum(),
-        "Lighting":  (df["Lighting_%"] > 50).sum(),
+        "HVAC": (df["HVAC_%"] > 50).sum(),
+        "Lighting": (df["Lighting_%"] > 50).sum(),
         "Machinery": (df["Machinery_%"] > 50).sum(),
     }
     top_ineff = max(ineff_areas, key=ineff_areas.get)
@@ -60,8 +60,8 @@ def run_ai_energy_analysis(df):
         recs = []
         base = row["Energy_kWh"]
         def savings(pct):
-            red       = pct * 0.20
-            save_kwh  = base * (red / 100)
+            red = pct * 0.20
+            save_kwh = base * (red / 100)
             return save_kwh * TARIFF, save_kwh * CO2_PER_KWH
 
         if row["HVAC_%"] > 50:
@@ -83,14 +83,13 @@ def run_ai_energy_analysis(df):
     # Totals
     df["Est_Cost_Saved"] = df["Smart_Recommendation"]\
         .str.extractall(r"₹(\d+)")\
-        .astype(float).sum(level=0, axis=1)  # fix here: sum with axis=1, no level argument
-
+        .astype(float).sum(axis=1)
     df["Est_CO2_Saved"] = df["Smart_Recommendation"]\
         .str.extractall(r"([\d.]+) kg")\
-        .astype(float).sum(level=0, axis=1)  # fix here: sum with axis=1, no level argument
+        .astype(float).sum(axis=1)
 
-    total_cost_saved = df["Est_Cost_Saved"].sum()  # Sum up totals
-    total_co2_saved  = df["Est_CO2_Saved"].sum()  # Sum up totals
+    total_cost_saved = df["Est_Cost_Saved"].sum()
+    total_co2_saved = df["Est_CO2_Saved"].sum()
 
     # In‑function display of per‑month recommendations
     st.markdown("### 🧠 AI Recommendations")
@@ -131,23 +130,23 @@ input_rows = []
 
 for i, mon in enumerate(months):
     with st.expander(f"Month: {mon}"):
-        e   = st.number_input(f"Energy (kWh) - {mon}", value=0.0, key=f"e{i}")
+        e = st.number_input(f"Energy (kWh) - {mon}", value=0.0, key=f"e{i}")
         t_o = st.number_input(f"Outdoor Temp (°C) - {mon}", value=30.0, key=f"o{i}")
         t_i = st.number_input(f"Indoor Temp (°C) - {mon}", value=24.0, key=f"i{i}")
-        h   = st.number_input(f"Humidity (%) - {mon}", value=50.0, key=f"h{i}")
-        oc  = st.slider(f"Occupancy (%) - {mon}", 0, 100, 75, key=f"oc{i}")
-        hv  = st.slider(f"HVAC Usage (%) - {mon}", 0, 100, 40, key=f"hv{i}")
-        li  = st.slider(f"Lighting Usage (%) - {mon}", 0, 100, 30, key=f"li{i}")
-        ma  = st.slider(f"Machinery Usage (%) - {mon}", 0, 100, 30, key=f"ma{i}")
+        h = st.number_input(f"Humidity (%) - {mon}", value=50.0, key=f"h{i}")
+        oc = st.slider(f"Occupancy (%) - {mon}", 0, 100, 75, key=f"oc{i}")
+        hv = st.slider(f"HVAC Usage (%) - {mon}", 0, 100, 40, key=f"hv{i}")
+        li = st.slider(f"Lighting Usage (%) - {mon}", 0, 100, 30, key=f"li{i}")
+        ma = st.slider(f"Machinery Usage (%) - {mon}", 0, 100, 30, key=f"ma{i}")
 
-        input_rows.append([ 
-            sel_year, mon, i+1, e, t_o, t_i, h, oc, hv, li, ma 
+        input_rows.append([
+            sel_year, mon, i+1, e, t_o, t_i, h, oc, hv, li, ma
         ])
 
 if input_rows:
     df = pd.DataFrame(
         input_rows,
-        columns=[ 
+        columns=[
             "Year", "Month", "Month_Num", "Energy_kWh", "Avg_Temp",
             "Indoor_Temp", "Humidity", "Occupancy_%", "HVAC_%", "Lighting_%", "Machinery_%"
         ]
@@ -184,19 +183,19 @@ if "df_analyzed" in st.session_state:
         st.line_chart(df2_plot[["Energy_kWh", "Predicted_Energy"]])
     with c2:
         st.markdown("#### 💰 Cost (Actual vs Predicted)")
-        st.line_chart(df2_plot[["Cost_INR", "Predicted_Cost"]])
+        st.line_chart(df2_plot[["Predicted_Cost"]])
 
     st.markdown("### ⚙️ Key Performance Indicators (KPIs)")
     k1, k2, k3, k4 = st.columns(4)
     k1.metric("Avg Monthly Energy", f"{df2['Energy_kWh'].mean():.2f} kWh")
-    k2.metric("Avg Monthly Cost",   f"₹{df2['Cost_INR'].mean():.2f}")
-    k3.metric("Total CO₂ Emitted",   f"{df2['CO2_kg'].sum():.2f} kg")
-    k4.metric("Peak Load Month",     st.session_state.peak)
+    k2.metric("Avg Monthly Cost", f"₹{df2['Predicted_Cost'].mean():.2f}")
+    k3.metric("Total CO₂ Emitted", f"{df2['Energy_kWh'].sum() * CO2_PER_KWH:.2f} kg")
+    k4.metric("Peak Load Month", st.session_state.peak)
 
     st.markdown("#### ⚡️ Monthly Efficiency Score")
-    fig, ax = plt.subplots(figsize=(8,4))
+    fig, ax = plt.subplots(figsize=(8, 4))
     colors = df2["Efficiency_Score"].apply(
-        lambda x: "green" if x>100 else ("orange" if x>=90 else "red")
+        lambda x: "green" if x > 100 else ("orange" if x >= 90 else "red")
     )
     ax.bar(df2["Month"], df2["Efficiency_Score"], color=colors)
     ax.axhline(100, color="black", linestyle="--", linewidth=1)
@@ -207,8 +206,8 @@ if "df_analyzed" in st.session_state:
     st.subheader("AI Summary Report")
     st.markdown(f"**Peak Load Month:** {st.session_state.peak}")
     st.markdown(f"**Average Energy Usage:** {st.session_state.avg:.2f} kWh")
-    st.markdown(f"**Average Monthly Cost:** ₹{df2['Cost_INR'].mean():.2f}")
-    st.markdown(f"**Total CO₂ Emissions:** {df2['CO2_kg'].sum():.2f} kg")
+    st.markdown(f"**Average Monthly Cost:** ₹{df2['Predicted_Cost'].mean():.2f}")
+    st.markdown(f"**Total CO₂ Emissions:** {df2['Energy_kWh'].sum() * CO2_PER_KWH:.2f} kg")
     st.markdown(f"**Highest Efficiency Score:** {df2['Efficiency_Score'].max():.2f}")
 
     low = df2[df2["Efficiency_Score"] < 90]["Month"].tolist()
@@ -220,12 +219,12 @@ if "df_analyzed" in st.session_state:
     # Potential Savings
     ineff = df2[df2["Efficiency_Score"] < 90].copy()
     ineff["Energy_Saved"] = ineff["Energy_kWh"] - ineff["Predicted_Energy"]
-    ineff["Cost_Saved"]   = ineff["Energy_Saved"] * TARIFF
-    ineff["CO2_Saved"]    = ineff["Energy_Saved"] * CO2_PER_KWH
+    ineff["Cost_Saved"] = ineff["Energy_Saved"] * TARIFF
+    ineff["CO2_Saved"] = ineff["Energy_Saved"] * CO2_PER_KWH
 
     st.markdown("### Potential Savings if Low‑Efficiency Months Hit 100%")
     st.markdown(f"- **Annual Cost Savings:** ₹{ineff['Cost_Saved'].sum():.0f}")
-    st.markdown(f"- **Annual CO₂ Reduction:** {ineff['CO2_Saved'].sum():.1f} kg")
+    st.markdown(f"- **Annual CO₂ Reduction:** {ineff['CO2_Saved'].sum():.1f} kg")
     st.markdown(f"- **Top Inefficiency Area:** {st.session_state.top_ineff}")
 
     st.download_button(
@@ -233,4 +232,4 @@ if "df_analyzed" in st.session_state:
         data=df2.to_csv(index=False),
         file_name="energy_ai_analysis.csv",
         mime="text/csv"
-    ) 
+    )
