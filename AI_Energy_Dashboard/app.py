@@ -13,7 +13,7 @@ months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
 template_df = pd.DataFrame(columns=["Year", "Month", "Month_Num", "Energy_kWh", "Avg_Temp", "Indoor_Temp", "Humidity", "Occupancy_%", "HVAC_%", "Lighting_%", "Machinery_%"])
 
 st.set_page_config(page_title="AI Energy Dashboard", layout="wide")
-st.markdown("<h1 style='text-align: center; color: #2E8B57;'>\ud83c\udf31 Smart AI Energy Dashboard for Industries</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; color: #2E8B57;'>🌱 Smart AI Energy Dashboard for Industries</h1>", unsafe_allow_html=True)
 
 def run_ai_energy_analysis(df):
     X = df[["Year", "Month_Num", "Temp_Delta", "Humidity", "Occupancy_%", "HVAC_%", "Lighting_%", "Machinery_%"]]
@@ -37,9 +37,6 @@ def run_ai_energy_analysis(df):
     }
     top_ineff = max(ineff_areas, key=ineff_areas.get)
 
-    total_cost_saved = 0
-    total_co2_saved = 0
-
     def get_recommendation(row):
         recommendations = []
         reduction_percent = 20
@@ -54,15 +51,15 @@ def run_ai_energy_analysis(df):
 
         if row["HVAC_%"] > 50:
             cost, co2 = savings(row["HVAC_%"])
-            recommendations.append(f"Optimize HVAC (Save \u20b9{cost:.0f}, {co2:.1f} kg CO\u2082/month)")
+            recommendations.append(f"Optimize HVAC (Save ₹{cost:.0f}, {co2:.1f} kg CO₂/month)")
 
         if row["Lighting_%"] > 50:
             cost, co2 = savings(row["Lighting_%"])
-            recommendations.append(f"Switch to efficient lighting (Save \u20b9{cost:.0f}, {co2:.1f} kg CO\u2082/month)")
+            recommendations.append(f"Switch to efficient lighting (Save ₹{cost:.0f}, {co2:.1f} kg CO₂/month)")
 
         if row["Machinery_%"] > 50:
             cost, co2 = savings(row["Machinery_%"])
-            recommendations.append(f"Improve machinery scheduling (Save \u20b9{cost:.0f}, {co2:.1f} kg CO\u2082/month)")
+            recommendations.append(f"Improve machinery scheduling (Save ₹{cost:.0f}, {co2:.1f} kg CO₂/month)")
 
         if row["Efficiency_Score"] < 85:
             recommendations.append("Consider energy audits for process optimization")
@@ -73,7 +70,7 @@ def run_ai_energy_analysis(df):
 
     def extract_savings(text, value_type="cost"):
         import re
-        matches = re.findall(r"\u20b9(\d+)|([\d.]+) kg", text)
+        matches = re.findall(r"₹(\d+)|([\d.]+) kg", text)
         cost_saving = 0
         co2_saving = 0
         for cost, co2 in matches:
@@ -89,7 +86,7 @@ def run_ai_energy_analysis(df):
     total_cost_saved = df["Est_Cost_Saved"].sum()
     total_co2_saved = df["Est_CO2_Saved"].sum()
 
-    st.markdown("### \ud83e\uddd0 AI Recommendations")
+    st.markdown("### 🧠 AI Recommendations")
     for i, row in df.iterrows():
         st.markdown(f"""<div style='border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 8px; background-color: #f9f9f9;'>
             <b>{row['Month']}</b>: {row['Smart_Recommendation']}<br>
