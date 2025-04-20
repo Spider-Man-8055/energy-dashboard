@@ -96,13 +96,13 @@ def run_ai_energy_analysis(df):
 # ============================================
 # 💡 SECTION: Inefficiency Detection
 # ============================================
-if 'Predicted_Energy' in df.columns:
+if 'df' in locals() and 'Predicted_Energy' in df.columns:
     ineff_areas = {
-    "HVAC": df[df["HVAC_%"] > 50].shape[0],
-    "Lighting": df[df["Lighting_%"] > 50].shape[0],
-    "Machinery": df[df["Machinery_%"] > 50].shape[0]
-}
-top_ineff = max(ineff_areas, key=ineff_areas.get)
+        "HVAC": df[df["HVAC_%"] > 50].shape[0],
+        "Lighting": df[df["Lighting_%"] > 50].shape[0],
+        "Machinery": df[df["Machinery_%"] > 50].shape[0]
+    }
+    top_ineff = max(ineff_areas, key=ineff_areas.get)
 
 
 # ============================================
