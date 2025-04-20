@@ -225,7 +225,7 @@ if uploaded_file is not None:
         df["Cost_INR"] = df["Energy_kWh"] * TARIFF
         df["CO2_kg"] = df["Energy_kWh"] * CO2_PER_KWH
 
-if st.button("\ud83d\udca1 Run AI Analysis on Uploaded Data"):
+if st.button("💡 Run AI Analysis on Uploaded Data"):
     if 'df' in locals() and not df.empty:
         df, monthly_avg, peak_month, top_ineff, total_cost_saved, total_co2_saved = run_ai_energy_analysis(df)
         st.success("\u2705 AI analysis completed on uploaded data.")
@@ -273,7 +273,7 @@ if input_data:
     df["Cost_INR"] = df["Energy_kWh"] * TARIFF
     df["CO2_kg"] = df["Energy_kWh"] * CO2_PER_KWH
 
-if st.button("\ud83d\udca1 Run AI Analysis on Manual Entry"):
+if st.button("💡 Run AI Analysis on Manual Entry"):
     if 'df' in locals() and not df.empty:
         df, monthly_avg, peak_month, top_ineff, total_cost_saved, total_co2_saved = run_ai_energy_analysis(df)
         st.success("\u2705 AI analysis completed on manual input.")
