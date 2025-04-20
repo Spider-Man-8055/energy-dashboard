@@ -23,79 +23,77 @@ st.markdown(
 
 # ─────────────── Analysis Function ───────────────
 def run_ai_energy_analysis(df):
+    # 1) Feature engineering
+    df = df.copy()
     df["Temp_Delta"] = df["Indoor_Temp"] - df["Avg_Temp"]
-    X = df[["Year","Month_Num","Temp_Delta","Humidity",
-            "Occupancy_%","HVAC_%","Lighting_%","Machinery_%"]]
-    y = df["Energy_kWh"]
 
+    # 2) Train a simple RandomForest
+    X = df[["Year","Month_Num","Temp_Delta","Humidity","Occupancy_%","HVAC_%","Lighting_%","Machinery_%"]]
+    y = df["Energy_kWh"]
     model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X, y)
 
+    # 3) Predict & score
     df["Predicted_Energy"] = model.predict(X)
     df["Predicted_Cost"]   = df["Predicted_Energy"] * TARIFF
-    df["Efficiency_Score"] = np.round((df["Predicted_Energy"] / df["Energy_kWh"]) * 100,2)
+    df["Efficiency_Score"] = np.round((df["Predicted_Energy"] / df["Energy_kWh"]) * 100, 2)
 
+    # 4) Benchmarks
     peak_month  = df.loc[df["Energy_kWh"].idxmax(), "Month"]
     monthly_avg = df["Energy_kWh"].mean()
     df["Benchmarking"] = df["Energy_kWh"].apply(
-        lambda x: "Above Average" if x>monthly_avg else "Below Average"
+        lambda x: "Above Average" if x > monthly_avg else "Below Average"
     )
 
-    # Determine top inefficiency area (counts >50%)
-    ineff_areas = {
-        "HVAC":      (df["HVAC_%"] > 50).sum(),
-        "Lighting":  (df["Lighting_%"] > 50).sum(),
-        "Machinery": (df["Machinery_%"] > 50).sum()
+    # 5) Top inefficiency area
+    ineff_counts = {
+        "HVAC":      (df["HVAC_%"]      > 50).sum(),
+        "Lighting":  (df["Lighting_%"]  > 50).sum(),
+        "Machinery": (df["Machinery_%"] > 50).sum(),
     }
-    top_ineff = max(ineff_areas, key=ineff_areas.get)
+    top_ineff = max(ineff_counts, key=ineff_counts.get)
 
-    # Prepare to collect per‑row numeric savings
-    cost_saves = []
-    co2_saves  = []
-    rec_texts  = []
-
-    for _, row in df.iterrows():
+    # 6) Build recommendations + numeric savings in one pass via apply()
+    def compute_row(row):
         recs = []
-        total_cost = 0.0
-        total_co2  = 0.0
-        base       = row["Energy_kWh"]
+        cost_sum, co2_sum = 0.0, 0.0
+        base = row["Energy_kWh"]
 
         def savings(pct):
-            red      = pct * 0.20
-            save_kwh = base * (red / 100)
-            return save_kwh * TARIFF, save_kwh * CO2_PER_KWH
+            red     = pct * 0.20
+            saved_kwh = base * (red / 100)
+            return saved_kwh * TARIFF, saved_kwh * CO2_PER_KWH
 
         if row["HVAC_%"] > 50:
             c, c2 = savings(row["HVAC_%"])
             recs.append(f"Optimize HVAC (Save ₹{c:.0f}, {c2:.1f} kg CO₂/mo)")
-            total_cost += c; total_co2 += c2
+            cost_sum += c; co2_sum += c2
         if row["Lighting_%"] > 50:
             c, c2 = savings(row["Lighting_%"])
             recs.append(f"Efficient lighting (Save ₹{c:.0f}, {c2:.1f} kg CO₂/mo)")
-            total_cost += c; total_co2 += c2
+            cost_sum += c; co2_sum += c2
         if row["Machinery_%"] > 50:
             c, c2 = savings(row["Machinery_%"])
             recs.append(f"Improve machinery (Save ₹{c:.0f}, {c2:.1f} kg CO₂/mo)")
-            total_cost += c; total_co2 += c2
+            cost_sum += c; co2_sum += c2
         if row["Efficiency_Score"] < 85:
             recs.append("Consider energy audits")
 
-        rec_texts.append("; ".join(recs) if recs else "All systems efficient")
-        cost_saves.append(total_cost)
-        co2_saves.append(total_co2)
+        text = "; ".join(recs) if recs else "All systems efficient"
+        return pd.Series([text, cost_sum, co2_sum],
+                         index=["Smart_Recommendation","Est_Cost_Saved","Est_CO2_Saved"])
 
-    df["Smart_Recommendation"] = rec_texts
-    df["Est_Cost_Saved"]       = cost_saves
-    df["Est_CO2_Saved"]        = co2_saves
+    rec_df = df.apply(compute_row, axis=1)
+    df = pd.concat([df, rec_df], axis=1)
 
     total_cost_saved = df["Est_Cost_Saved"].sum()
     total_co2_saved  = df["Est_CO2_Saved"].sum()
 
-    # Display per-month recommendations
+    # 7) Display per‐month recs
     st.markdown("### 🧠 AI Recommendations")
     for _, r in df.iterrows():
         st.markdown(
-            f"""<div style='border:1px solid #ddd; padding:8px; margin:4px 0; border-radius:6px; background:#f9f9f9;'>
+            f"""<div style='border:1px solid #ddd; padding:10px; margin:5px 0; border-radius:8px; background:#f9f9f9;'>
                  <b>{r['Month']}</b>: {r['Smart_Recommendation']}<br>
                  <i>Efficiency Score: {r['Efficiency_Score']}%</i>
                </div>""",
@@ -104,7 +102,7 @@ def run_ai_energy_analysis(df):
 
     return df, monthly_avg, peak_month, top_ineff, total_cost_saved, total_co2_saved
 
-# ─────────────── Upload CSV Section ───────────────
+# ─────────────── CSV Upload Section ───────────────
 st.markdown("## 📁 Data Input Options")
 with st.expander("📄 Upload CSV File"):
     buf = io.StringIO()
@@ -122,30 +120,30 @@ with st.expander("📄 Upload CSV File"):
 # ─────────────── Manual Entry Section ───────────────
 st.markdown("### OR")
 st.markdown("## ✍️ Manual Entry")
+
 years = list(range(2000, 2031))
 sel_year = st.selectbox("Select Year", years)
-input_data = []
-for i, m in enumerate(months):
+rows = []
+for i,m in enumerate(months):
     with st.expander(f"Month: {m}"):
-        e   = st.number_input(f"Energy kWh - {m}", value=0.0, key=f"e{i}")
-        at  = st.number_input(f"Outdoor Temp °C - {m}", value=30.0, key=f"at{i}")
-        it  = st.number_input(f"Indoor Temp °C - {m}", value=24.0, key=f"it{i}")
-        h   = st.number_input(f"Humidity % - {m}", value=50.0, key=f"h{i}")
-        oc  = st.slider(f"Occupancy % - {m}", 0, 100, 75, key=f"oc{i}")
-        hv  = st.slider(f"HVAC Usage % - {m}", 0, 100, 40, key=f"hv{i}")
-        li  = st.slider(f"Lighting Usage % - {m}", 0, 100, 30, key=f"li{i}")
-        ma  = st.slider(f"Machinery Usage % - {m}", 0, 100, 30, key=f"ma{i}")
-        input_data.append([sel_year, m, i+1, e, at, it, h, oc, hv, li, ma])
+        e   = st.number_input(f"Energy (kWh) - {m}",   value=0.0, key=f"e{i}")
+        at  = st.number_input(f"Outdoor Temp (°C) - {m}", value=30.0, key=f"t{o}{i}")
+        it  = st.number_input(f"Indoor Temp (°C) - {m}",  value=24.0, key=f"t{i}")
+        h   = st.number_input(f"Humidity (%) - {m}",     value=50.0, key=f"h{i}")
+        oc  = st.slider(f"Occupancy (%) - {m}",     0,100,75, key=f"oc{i}")
+        hv  = st.slider(f"HVAC Usage (%) - {m}",    0,100,40, key=f"hv{i}")
+        li  = st.slider(f"Lighting Usage (%) - {m}",0,100,30, key=f"li{i}")
+        ma  = st.slider(f"Machinery Usage (%) - {m}",0,100,30, key=f"ma{i}")
+        rows.append([sel_year,m,i+1,e,at,it,h,oc,hv,li,ma])
 
-if input_data:
-    df = pd.DataFrame(
-        input_data,
-        columns=["Year","Month","Month_Num","Energy_kWh","Avg_Temp",
-                 "Indoor_Temp","Humidity","Occupancy_%","HVAC_%","Lighting_%","Machinery_%"]
-    )
+if rows:
+    df = pd.DataFrame(rows, columns=[
+        "Year","Month","Month_Num","Energy_kWh","Avg_Temp",
+        "Indoor_Temp","Humidity","Occupancy_%","HVAC_%","Lighting_%","Machinery_%"
+    ])
 
 # ─────────────── Run Analysis Buttons ───────────────
-if st.button("💡 Run AI Analysis on Uploaded Data") and 'df' in locals():
+if st.button("💡 Run AI Analysis on Uploaded Data") and "df" in locals():
     (st.session_state.df_analyzed,
      st.session_state.avg,
      st.session_state.peak,
@@ -154,7 +152,7 @@ if st.button("💡 Run AI Analysis on Uploaded Data") and 'df' in locals():
      st.session_state.co2_saved) = run_ai_energy_analysis(df)
     st.success("✅ AI analysis completed on uploaded data.")
 
-if st.button("💡 Run AI Analysis on Manual Entry") and 'df' in locals():
+if st.button("💡 Run AI Analysis on Manual Entry") and "df" in locals():
     (st.session_state.df_analyzed,
      st.session_state.avg,
      st.session_state.peak,
@@ -167,6 +165,7 @@ if st.button("💡 Run AI Analysis on Manual Entry") and 'df' in locals():
 if "df_analyzed" in st.session_state:
     df2 = st.session_state.df_analyzed
 
+    # Visualization
     st.subheader("📊 Visualization")
     c1, c2 = st.columns(2)
     with c1:
@@ -177,22 +176,25 @@ if "df_analyzed" in st.session_state:
         st.markdown("#### 💰 Cost (Actual vs Predicted)")
         st.line_chart(df2_plot[["Cost_INR","Predicted_Cost"]])
 
+    # KPIs
     st.markdown("### ⚙️ Key Performance Indicators")
     k1,k2,k3,k4 = st.columns(4)
-    k1.metric("Avg Monthly Energy", f"{df2['Energy_kWh'].mean():.2f} kWh")
-    k2.metric("Avg Monthly Cost",   f"₹{df2['Predicted_Cost'].mean():.2f}")
+    k1.metric("Avg Monthly Energy",  f"{df2['Energy_kWh'].mean():.2f} kWh")
+    k2.metric("Avg Monthly Cost",    f"₹{df2['Predicted_Cost'].mean():.2f}")
     k3.metric("Total CO₂ Emitted",   f"{(df2['Energy_kWh']*CO2_PER_KWH).sum():.2f} kg")
-    k4.metric("Peak Load Month",     st.session_state.peak)
+    k4.metric("🔺 Peak Load Month",    st.session_state.peak)
 
+    # Efficiency Chart
     st.markdown("#### ⚡️ Monthly Efficiency Score")
     fig, ax = plt.subplots(figsize=(8,4))
-    cols = df2["Efficiency_Score"].apply(lambda x:"green" if x>100 else ("orange" if x>=90 else "red"))
+    cols = df2["Efficiency_Score"].apply(lambda x: "green" if x>100 else ("orange" if x>=90 else "red"))
     ax.bar(df2["Month"], df2["Efficiency_Score"], color=cols)
     ax.axhline(100, color="black", linestyle="--", linewidth=1)
     ax.set_ylabel("Efficiency Score (%)")
     ax.set_title("Monthly Energy Efficiency")
     st.pyplot(fig)
 
+    # Summary Report
     st.subheader("AI Summary Report")
     st.markdown(f"**Peak Load Month:** {st.session_state.peak}")
     st.markdown(f"**Average Energy Usage:** {st.session_state.avg:.2f} kWh")
@@ -206,11 +208,13 @@ if "df_analyzed" in st.session_state:
     else:
         st.markdown("**All months have good energy efficiency.**")
 
+    # Potential Savings
     st.markdown("### Potential Savings if Low‑Efficiency Months Hit 100%")
     st.markdown(f"- **Annual Cost Savings:** ₹{st.session_state.cost_saved:.0f}")
     st.markdown(f"- **Annual CO₂ Reduction:** {st.session_state.co2_saved:.1f} kg")
     st.markdown(f"- **Top Inefficiency Area:** {st.session_state.top_ineff}")
 
+    # CSV Download
     st.download_button(
         "Download Report as CSV",
         data=df2.to_csv(index=False),
