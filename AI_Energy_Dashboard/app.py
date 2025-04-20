@@ -12,7 +12,7 @@ months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 template_df = pd.DataFrame(
-    columns=[
+    columns=[ 
         "Year", "Month", "Month_Num", "Energy_kWh", "Avg_Temp",
         "Indoor_Temp", "Humidity", "Occupancy_%", "HVAC_%",
         "Lighting_%", "Machinery_%"
@@ -83,13 +83,14 @@ def run_ai_energy_analysis(df):
     # Totals
     df["Est_Cost_Saved"] = df["Smart_Recommendation"]\
         .str.extractall(r"₹(\d+)")\
-        .astype(float).sum(level=0)
+        .astype(float).sum(level=0, axis=1)  # fix here: sum with axis=1, no level argument
+
     df["Est_CO2_Saved"] = df["Smart_Recommendation"]\
         .str.extractall(r"([\d.]+) kg")\
-        .astype(float).sum(level=0)
+        .astype(float).sum(level=0, axis=1)  # fix here: sum with axis=1, no level argument
 
-    total_cost_saved = df["Est_Cost_Saved"].sum()
-    total_co2_saved  = df["Est_CO2_Saved"].sum()
+    total_cost_saved = df["Est_Cost_Saved"].sum()  # Sum up totals
+    total_co2_saved  = df["Est_CO2_Saved"].sum()  # Sum up totals
 
     # In‑function display of per‑month recommendations
     st.markdown("### 🧠 AI Recommendations")
@@ -139,16 +140,16 @@ for i, mon in enumerate(months):
         li  = st.slider(f"Lighting Usage (%) - {mon}", 0, 100, 30, key=f"li{i}")
         ma  = st.slider(f"Machinery Usage (%) - {mon}", 0, 100, 30, key=f"ma{i}")
 
-        input_rows.append([
-            sel_year, mon, i+1, e, t_o, t_i, h, oc, hv, li, ma
+        input_rows.append([ 
+            sel_year, mon, i+1, e, t_o, t_i, h, oc, hv, li, ma 
         ])
 
 if input_rows:
     df = pd.DataFrame(
         input_rows,
-        columns=[
-            "Year","Month","Month_Num","Energy_kWh","Avg_Temp",
-            "Indoor_Temp","Humidity","Occupancy_%","HVAC_%","Lighting_%","Machinery_%"
+        columns=[ 
+            "Year", "Month", "Month_Num", "Energy_kWh", "Avg_Temp",
+            "Indoor_Temp", "Humidity", "Occupancy_%", "HVAC_%", "Lighting_%", "Machinery_%"
         ]
     )
 
@@ -232,4 +233,4 @@ if "df_analyzed" in st.session_state:
         data=df2.to_csv(index=False),
         file_name="energy_ai_analysis.csv",
         mime="text/csv"
-    )
+    ) 
