@@ -3,8 +3,14 @@ import pandas as pd
 import numpy as np
 import tensorflow as tf
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.linear_model import LinearRegression
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
 import matplotlib.pyplot as plt
 import io
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
 
 # ─────────────── Constants ───────────────
 TARIFF = 8.5  # INR per kWh
@@ -37,59 +43,94 @@ def run_ai_energy_analysis(df):
     df['Energy_kWh'] = df['Electricity_Usage_Watts'] / 1000
     df['Cost_INR'] = df['Energy_kWh'] * TARIFF
     df['CO2_kg'] = df['Energy_kWh'] * CO2_PER_KWH
-    df['Avg_Temp_Delta'] = df['Avg_Internal_Temp_C'] - df['Avg_External_Temp_C']
+    df['Temp_Delta'] = df['Internal_Temp_C'] - df['External_Temp_C']
 
-    features = ['Year', 'Month', 'Electricity_Usage_Watts', 'Avg_Internal_Temp_C',
-                'Avg_External_Temp_C', 'Machinery_Usage_Percent',
-                'Lighting_Usage_Percent', 'HVAC_Usage_Percent']
-    X = df[features].values
-    y = df['Electricity_Usage_Watts'].values
+    # Trends & peak
+    df['Trend_3M_kWh'] = df['Energy_kWh'].rolling(3, min_periods=1).mean()
+    peak_idx = df['Energy_kWh'].idxmax()
+    peak_year, peak_month, peak_val = df.loc[peak_idx, ['Year','Month','Energy_kWh']]
 
-    scaler = MinMaxScaler()
-    X_scaled = scaler.fit_transform(X)
+    # Cost forecast via TensorFlow
+    df['Month_Index'] = (df['Year']-df['Year'].min())*12 + df['Month']
+    X = df[['Month_Index']].values
+    y = df['Cost_INR'].values
+    model = Sequential([Dense(8, activation='relu', input_shape=(1,)), Dense(1)])
+    model.compile('adam','mse')
+    model.fit(X,y,epochs=80,verbose=0)
+    next_cost = model.predict([[df['Month_Index'].max()+1]])[0,0]
 
-    model = tf.keras.Sequential([
-        tf.keras.layers.Dense(32, activation='relu', input_shape=(X_scaled.shape[1],)),
-        tf.keras.layers.Dense(16, activation='relu'),
-        tf.keras.layers.Dense(1)
-    ])
-    model.compile(optimizer='adam', loss='mse')
-    model.fit(X_scaled, y, epochs=50, verbose=0)
+    # Recommendations
+    avg_usage = df[['Machinery_Usage_Percent','Lighting_Usage_Percent','HVAC_Usage_Percent']].mean()
+    top_comp = avg_usage.idxmax().replace('_Usage_Percent','')
+    recs = [
+        f"🔺 Peak usage: {peak_val:.1f} kWh in {int(peak_year)}-{'%02d'%peak_month}",
+        f"💡 Optimize {top_comp} usage (avg {avg_usage[top_comp+'_Usage_Percent']:.1f}%)",
+        "💡 Adjust HVAC setpoints by 1-2°C",
+        "💡 Implement LED lighting and sensor controls",
+        "🌱 Conduct regular equipment maintenance"
+    ]
 
-    df['Predicted_Usage_Watts'] = model.predict(X_scaled).flatten()
-    df['Predicted_kWh'] = df['Predicted_Usage_Watts'] / 1000
+    # Benchmark
+    thresh = df['Energy_kWh'].mean()*0.9
+    df['Benchmark'] = df['Energy_kWh'].apply(lambda x: 'Good' if x<=thresh else 'High')
 
-    peak_idx = df['Electricity_Usage_Watts'].idxmax()
-    peak_info = df.loc[peak_idx, ['Year', 'Month', 'Electricity_Usage_Watts']]
+    # Plot 1: Energy
+    st.subheader("📊 Energy Consumption & Trends")
+    fig1, ax1 = plt.subplots(figsize=(10,4))
+    df['Label']=df['Year'].astype(str)+'-'+df['Month'].astype(str).str.zfill(2)
+    ax1.plot(df['Label'],df['Energy_kWh'],marker='o',label='Actual kWh')
+    ax1.plot(df['Label'],df['Trend_3M_kWh'],linestyle='--',label='3M Avg')
+    ax1.set_xticklabels(df['Label'],rotation=45)
+    ax1.set_ylabel('kWh')
+    ax1.legend()
+    st.pyplot(fig1)
 
-    recs = []
-    high_consumption = df['Electricity_Usage_Watts'].max()
-    high_month = df.loc[df['Electricity_Usage_Watts'].idxmax(), 'Month']
-    recs.append(f"🔺 Highest consumption: {high_consumption:.0f} W in Month {high_month}")
-    recs.append("💡 Consider optimizing equipment usage during peak months.")
-    recs.append("💡 Adjust HVAC setpoints by 1-2°C to save energy.")
-    recs.append("💡 Use LED lighting and auto-shutoff sensors.")
-    recs.append("🌱 Conduct regular maintenance to improve efficiency.")
+    # Plot 2: Cost Trend
+    st.subheader("📈 Cost Trend Over Time")
+    fig2, ax2 = plt.subplots(figsize=(10,4))
+    ax2.plot(df['Label'],df['Cost_INR'],marker='x',color='orange')
+    ax2.set_xticklabels(df['Label'],rotation=45)
+    ax2.set_ylabel('Cost (INR)')
+    st.pyplot(fig2)
 
-    st.subheader("📊 Usage Charts")
-    fig, ax = plt.subplots(figsize=(10, 4))
-    ax.plot(df['Month'].astype(str) + "-" + df['Year'].astype(str), df['Electricity_Usage_Watts'], label='Actual (W)')
-    ax.plot(df['Month'].astype(str) + "-" + df['Year'].astype(str), df['Predicted_Usage_Watts'], label='Predicted (W)', linestyle='--')
-    ax.set_xlabel("Month-Year")
-    ax.set_ylabel("Electricity Usage (W)")
-    ax.legend()
-    plt.xticks(rotation=45)
-    st.pyplot(fig)
+    # KPIs
+    st.subheader("💰 Cost Forecast & 🌎 CO₂ Emissions")
+    c1,c2,c3=st.columns(3)
+    c1.metric("Next Month Cost",f"₹{next_cost:.2f}")
+    c2.metric("Total Cost",f"₹{df['Cost_INR'].sum():.2f}")
+    c3.metric("Total CO₂",f"{df['CO2_kg'].sum():.2f} kg")
 
-    st.subheader("⚙️ Key Metrics")
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Total Energy (kWh)", f"{df['Energy_kWh'].sum():.2f}")
-    col2.metric("Total Cost (INR)", f"₹{df['Cost_INR'].sum():.2f}")
-    col3.metric("Total CO₂ (kg)", f"{df['CO2_kg'].sum():.2f}")
+    st.subheader("⚙️ Key Performance Indicators")
+    k1,k2,k3,k4,k5=st.columns(5)
+    k1.metric("Total Energy",f"{df['Energy_kWh'].sum():.1f} kWh")
+    k2.metric("Avg Monthly kWh",f"{df['Energy_kWh'].mean():.1f}")
+    k3.metric("Peak Month",f"{int(peak_year)}-{'%02d'%peak_month}")
+    k4.metric("Efficiency Score",f"{(df['Trend_3M_kWh'].mean()/df['Energy_kWh'].mean()*100):.1f}%")
+    k5.metric("Benchmark",df['Benchmark'].iloc[-1])
 
-    st.subheader("🔧 Recommendations to Reduce Usage")
-    for r in recs:
-        st.markdown(f"- {r}")
+    st.subheader("🔧 Recommendations to Optimize Energy")
+    for r in recs: st.markdown(f"- {r}")
+
+    # Download CSV
+    csv_data=df.to_csv(index=False)
+    st.download_button("Download CSV",csv_data,"energy_report.csv","text/csv")
+
+    # Download PDF
+    buffer=io.BytesIO()
+    doc=SimpleDocTemplate(buffer,pagesize=letter)
+    styles=getSampleStyleSheet()
+    elems=[Paragraph("AI Energy Analysis Report",styles['Title']),Spacer(1,12)]
+    # Add KPIs to PDF
+    elems.append(Paragraph(f"Total Energy: {df['Energy_kWh'].sum():.1f} kWh",styles['Normal']))
+    elems.append(Paragraph(f"Total Cost: ₹{df['Cost_INR'].sum():.2f}",styles['Normal']))
+    elems.append(Paragraph(f"Total CO₂: {df['CO2_kg'].sum():.2f} kg",styles['Normal']))
+    elems.append(Spacer(1,12))
+    # Table of first few rows
+    data=[df.columns.tolist()]+df.head(10).values.tolist()
+    elems.append(Table(data))
+    doc.build(elems)
+    buffer.seek(0)
+    st.download_button("Download PDF",buffer,"energy_report.pdf","application/pdf")
 
     return df
 
