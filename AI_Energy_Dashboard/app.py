@@ -57,7 +57,7 @@ def run_ai_energy_analysis(df):
     df['Energy_kWh'] = df['Electricity_Usage_Watts'] / 1000
     df['Cost_INR'] = df['Energy_kWh'] * TARIFF
     df['CO2_kg'] = df['Energy_kWh'] * CO2_PER_KWH
-    df['Temp_Delta'] = df['Internal_Temp_C'] - df['External_Temp_C']
+    df['Temp_Delta'] = df['Avg_Internal_Temp_C'] - df['Avg_External_Temp_C']
 
     # Trends & peak
     df['Trend_3M_kWh'] = df['Energy_kWh'].rolling(3, min_periods=1).mean()
