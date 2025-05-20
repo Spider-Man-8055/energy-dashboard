@@ -21,7 +21,7 @@ st.markdown(
     </style>
     """, unsafe_allow_html=True
 )
-st.title("🌱 Smart AI Energy Dashboard for Industries")
+st.title("🌱 AI Energy Dashboard for Industries")
 
 # ─────────────── Session State Initialization ───────────────
 if 'num_years' not in st.session_state:
@@ -94,7 +94,7 @@ def run_ai_energy_analysis(df):
     return df
 
 # ─────────────── Step 1: Years Selection ───────────────
-st.subheader("Step 1: How many years of data would you like to analyze?")
+st.subheader("How many years of data would you like to analyze?")
 years = list(range(1, 6))
 num = st.selectbox("Please select number of years:", years, index=0)
 st.session_state.num_years = num
@@ -114,7 +114,7 @@ else:
     st.session_state.selected_years = selected_years
 
 # ─────────────── Step 2: Data Input Method ───────────────
-st.subheader("Step 2: Choose data input method:")
+st.subheader("Choose data input method:")
 mode = st.radio("Select input type:", ["Upload CSV File", "Manual Entry"])
 st.session_state.data_mode = mode
 
