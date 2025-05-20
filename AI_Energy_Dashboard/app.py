@@ -178,6 +178,6 @@ if "df_analyzed" in st.session_state:
     st.markdown(f"**Peak Load Month:** {st.session_state.peak}")
     st.markdown(f"**Average Energy Usage:** {st.session_state.avg:.2f} kWh")
     st.markdown(f"**Average Monthly Cost:** ₹{df2['Predicted_Cost'].mean():.2f}")
-    st.markdown(f"**Total CO₂ Emissions:** {(df2['Energy_kWh'] * CO2_PER_KWH).sum():.
-::contentReference[oaicite:0]{index=0}
+    st.markdown(f"**Total CO₂ Emissions:** {(df2['Energy_kWh'] * CO2_PER_KWH).sum():.2f} kg")
+
  
