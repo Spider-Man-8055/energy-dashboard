@@ -37,10 +37,10 @@ def run_ai_energy_analysis(df):
     df['Energy_kWh'] = df['Electricity_Usage_Watts'] / 1000
     df['Cost_INR'] = df['Energy_kWh'] * TARIFF
     df['CO2_kg'] = df['Energy_kWh'] * CO2_PER_KWH
-    df['Temp_Delta'] = df['Internal_Temp_C'] - df['External_Temp_C']
+    df['Avg_Temp_Delta'] = df['Avg_Internal_Temp_C'] - df['Avg_External_Temp_C']
 
-    features = ['Year', 'Month', 'Electricity_Usage_Watts', 'Internal_Temp_C',
-                'External_Temp_C', 'Machinery_Usage_Percent',
+    features = ['Year', 'Month', 'Electricity_Usage_Watts', 'Avg_Internal_Temp_C',
+                'Avg_External_Temp_C', 'Machinery_Usage_Percent',
                 'Lighting_Usage_Percent', 'HVAC_Usage_Percent']
     X = df[features].values
     y = df['Electricity_Usage_Watts'].values
@@ -122,8 +122,8 @@ st.session_state.data_mode = mode
 if mode == "Upload CSV File":
     st.subheader("📄 Upload CSV File")
     template = pd.DataFrame(columns=[
-        'Year', 'Month', 'Electricity_Usage_Watts', 'External_Temp_C',
-        'Internal_Temp_C', 'Machinery_Usage_Percent',
+        'Year', 'Month', 'Electricity_Usage_Watts', 'Avg_External_Temp_C',
+        'Avg_Internal_Temp_C', 'Machinery_Usage_Percent',
         'Lighting_Usage_Percent', 'HVAC_Usage_Percent'
     ])
 
@@ -135,8 +135,8 @@ if mode == "Upload CSV File":
                 'Year': y,
                 'Month': m,
                 'Electricity_Usage_Watts': np.nan,
-                'External_Temp_C': np.nan,
-                'Internal_Temp_C': np.nan,
+                'Avg_External_Temp_C': np.nan,
+                'Avg_Internal_Temp_C': np.nan,
                 'Machinery_Usage_Percent': np.nan,
                 'Lighting_Usage_Percent': np.nan,
                 'HVAC_Usage_Percent': np.nan
@@ -179,8 +179,8 @@ elif mode == "Manual Entry":
                     'Year': year,
                     'Month': m,
                     'Electricity_Usage_Watts': watts,
-                    'External_Temp_C': ext,
-                    'Internal_Temp_C': intl,
+                    'Avg_External_Temp_C': ext,
+                    'Avg_Internal_Temp_C': intl,
                     'Machinery_Usage_Percent': mach,
                     'Lighting_Usage_Percent': light,
                     'HVAC_Usage_Percent': hvac
