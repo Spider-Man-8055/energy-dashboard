@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.ensemble import RandomForestRegressor
+import tensorflow as tf
+from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
 import io
 
@@ -21,13 +22,26 @@ def run_ai_energy_analysis(df):
     df["Cost_INR"] = df["Energy_kWh"] * TARIFF
     df["Temp_Delta"] = df["Indoor_Temp"] - df["Avg_Temp"]
 
-    X = df[["Year", "Month_Num", "Temp_Delta", "Humidity", "Occupancy_%", "HVAC_%", "Lighting_%", "Machinery_%"]]
-    y = df["Energy_kWh"]
+    features = ["Year", "Month_Num", "Temp_Delta", "HVAC_%", "Lighting_%", "Machinery_%"]
+    target = "Energy_kWh"
 
-    model = RandomForestRegressor(n_estimators=100, random_state=42)
-    model.fit(X, y)
+    X = df[features].values
+    y = df[target].values
 
-    df["Predicted_Energy"] = model.predict(X)
+    # Normalize input features
+    scaler = MinMaxScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    # TensorFlow Model
+    model = tf.keras.Sequential([
+        tf.keras.layers.Dense(16, activation='relu', input_shape=(X_scaled.shape[1],)),
+        tf.keras.layers.Dense(8, activation='relu'),
+        tf.keras.layers.Dense(1)
+    ])
+    model.compile(optimizer='adam', loss='mse')
+    model.fit(X_scaled, y, epochs=100, verbose=0)
+
+    df["Predicted_Energy"] = model.predict(X_scaled).flatten()
     df["Predicted_Cost"] = df["Predicted_Energy"] * TARIFF
     df["Efficiency_Score"] = np.round((df["Predicted_Energy"] / df["Energy_kWh"]) * 100, 2)
 
@@ -45,7 +59,7 @@ def run_ai_energy_analysis(df):
     def compute_row(row):
         recs, cost_sum, co2_sum = [], 0.0, 0.0
         base = row["Energy_kWh"]
-        def savings(pct):
+        def savings(pct):  # 20% savings
             saved_kwh = base * (pct * 0.20) / 100
             return saved_kwh * TARIFF, saved_kwh * CO2_PER_KWH
 
@@ -68,13 +82,12 @@ def run_ai_energy_analysis(df):
 
     return df, monthly_avg, peak_month, top_ineff, df["Est_Cost_Saved"].sum(), df["Est_CO2_Saved"].sum()
 
-
 # ─────────────── Input Section ───────────────
 st.markdown("## 📁 Data Input Options")
 
 template_df = pd.DataFrame(columns=[
     "Year", "Month", "Month_Num", "Energy_kWh", "Avg_Temp",
-    "Indoor_Temp", "Humidity", "Occupancy_%", "HVAC_%", "Lighting_%", "Machinery_%"
+    "Indoor_Temp", "HVAC_%", "Lighting_%", "Machinery_%"
 ])
 
 with st.expander("📄 Upload CSV File"):
@@ -111,17 +124,15 @@ for i, m in enumerate(months):
         energy = st.number_input(f"Energy (kWh) - {m}", value=0.0, key=f"e_{i}")
         outdoor_temp = st.number_input(f"Outdoor Temp (°C) - {m}", value=30.0, key=f"at_{i}")
         indoor_temp = st.number_input(f"Indoor Temp (°C) - {m}", value=24.0, key=f"it_{i}")
-        humidity = st.number_input(f"Humidity (%) - {m}", value=50.0, key=f"h_{i}")
-        occupancy = st.slider(f"Occupancy (%) - {m}", 0, 100, 75, key=f"oc_{i}")
         hvac = st.slider(f"HVAC Usage (%) - {m}", 0, 100, 40, key=f"hv_{i}")
         lighting = st.slider(f"Lighting Usage (%) - {m}", 0, 100, 30, key=f"li_{i}")
         machinery = st.slider(f"Machinery Usage (%) - {m}", 0, 100, 30, key=f"ma_{i}")
-        rows.append([sel_year, m, i+1, energy, outdoor_temp, indoor_temp, humidity, occupancy, hvac, lighting, machinery])
+        rows.append([sel_year, m, i+1, energy, outdoor_temp, indoor_temp, hvac, lighting, machinery])
 
 if rows and st.button("💡 Run AI Analysis on Manual Entry"):
     df_manual = pd.DataFrame(rows, columns=[
         "Year", "Month", "Month_Num", "Energy_kWh", "Avg_Temp",
-        "Indoor_Temp", "Humidity", "Occupancy_%", "HVAC_%", "Lighting_%", "Machinery_%"
+        "Indoor_Temp", "HVAC_%", "Lighting_%", "Machinery_%"
     ])
     (st.session_state.df_analyzed,
      st.session_state.avg,
@@ -167,20 +178,6 @@ if "df_analyzed" in st.session_state:
     st.markdown(f"**Peak Load Month:** {st.session_state.peak}")
     st.markdown(f"**Average Energy Usage:** {st.session_state.avg:.2f} kWh")
     st.markdown(f"**Average Monthly Cost:** ₹{df2['Predicted_Cost'].mean():.2f}")
-    st.markdown(f"**Total CO₂ Emissions:** {(df2['Energy_kWh'] * CO2_PER_KWH).sum():.2f} kg")
-    st.markdown(f"**Highest Efficiency Score:** {df2['Efficiency_Score'].max():.2f}")
-
-    low = df2[df2["Efficiency_Score"] < 90]["Month"].tolist()
-    if low:
-        st.markdown(f"**Months with Low Efficiency (<90%):** {', '.join(low)}")
-    else:
-        st.markdown("**All months have good energy efficiency.**")
-
-    st.markdown(f"- **Annual Cost Savings Potential:** ₹{st.session_state.cost_saved:.0f}")
-    st.markdown(f"- **Annual CO₂ Reduction Potential:** {st.session_state.co2_saved:.1f} kg")
-    st.markdown(f"- **Top Inefficiency Area:** {st.session_state.top_ineff}")
-
-    st.download_button("📥 Download Full AI Report as CSV",
-                       data=df2.to_csv(index=False),
-                       file_name="energy_ai_analysis.csv",
-                       mime="text/csv")
+    st.markdown(f"**Total CO₂ Emissions:** {(df2['Energy_kWh'] * CO2_PER_KWH).sum():.
+::contentReference[oaicite:0]{index=0}
+ 
