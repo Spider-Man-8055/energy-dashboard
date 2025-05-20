@@ -95,7 +95,7 @@ def run_ai_energy_analysis(df):
 
 # ─────────────── Step 1: Years Selection ───────────────
 st.subheader("How many years of data would you like to analyze?")
-years = list(range(1, 6))
+years = list(range(1, 11))
 num = st.selectbox("Please select number of years:", years, index=0)
 st.session_state.num_years = num
 
