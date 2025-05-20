@@ -71,7 +71,10 @@ def run_ai_energy_analysis(df):
     model = Sequential([Dense(8, activation='relu', input_shape=(1,)), Dense(1)])
     model.compile('adam','mse')
     model.fit(X,y,epochs=80,verbose=0)
-    next_cost = model.predict([[df['Month_Index'].max()+1]])[0,0]
+    import numpy as np
+    next_input = np.array([[df['Month_Index'].max() + 1]])
+    next_cost = model.predict(next_input)[0][0]
+
 
     # Recommendations
     avg_usage = df[['Machinery_Usage_Percent','Lighting_Usage_Percent','HVAC_Usage_Percent']].mean()
