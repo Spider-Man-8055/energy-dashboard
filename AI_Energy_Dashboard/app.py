@@ -26,30 +26,28 @@ st.title("🌱 Smart AI Energy Dashboard for Industries")
 # ─────────────── Session State Initialization ───────────────
 if 'num_years' not in st.session_state:
     st.session_state.num_years = None
+if 'selected_years' not in st.session_state:
+    st.session_state.selected_years = []
 if 'data_mode' not in st.session_state:
     st.session_state.data_mode = None
 
 # ─────────────── AI Analysis Function ───────────────
 def run_ai_energy_analysis(df):
-    # Preprocess
     df = df.copy()
     df['Energy_kWh'] = df['Electricity_Usage_Watts'] / 1000
     df['Cost_INR'] = df['Energy_kWh'] * TARIFF
     df['CO2_kg'] = df['Energy_kWh'] * CO2_PER_KWH
     df['Temp_Delta'] = df['Internal_Temp_C'] - df['External_Temp_C']
 
-    # Features & target
     features = ['Year', 'Month', 'Electricity_Usage_Watts', 'Internal_Temp_C',
                 'External_Temp_C', 'Machinery_Usage_Percent',
                 'Lighting_Usage_Percent', 'HVAC_Usage_Percent']
     X = df[features].values
     y = df['Electricity_Usage_Watts'].values
 
-    # Normalize
     scaler = MinMaxScaler()
     X_scaled = scaler.fit_transform(X)
 
-    # Build TensorFlow model
     model = tf.keras.Sequential([
         tf.keras.layers.Dense(32, activation='relu', input_shape=(X_scaled.shape[1],)),
         tf.keras.layers.Dense(16, activation='relu'),
@@ -58,15 +56,12 @@ def run_ai_energy_analysis(df):
     model.compile(optimizer='adam', loss='mse')
     model.fit(X_scaled, y, epochs=50, verbose=0)
 
-    # Predictions
     df['Predicted_Usage_Watts'] = model.predict(X_scaled).flatten()
     df['Predicted_kWh'] = df['Predicted_Usage_Watts'] / 1000
 
-    # Peak usage month
     peak_idx = df['Electricity_Usage_Watts'].idxmax()
     peak_info = df.loc[peak_idx, ['Year', 'Month', 'Electricity_Usage_Watts']]
 
-    # Recommendations
     recs = []
     high_consumption = df['Electricity_Usage_Watts'].max()
     high_month = df.loc[df['Electricity_Usage_Watts'].idxmax(), 'Month']
@@ -76,14 +71,14 @@ def run_ai_energy_analysis(df):
     recs.append("💡 Use LED lighting and auto-shutoff sensors.")
     recs.append("🌱 Conduct regular maintenance to improve efficiency.")
 
-    # Display Results
     st.subheader("📊 Usage Charts")
     fig, ax = plt.subplots(figsize=(10, 4))
-    ax.plot(df['Month'].astype(str), df['Electricity_Usage_Watts'], label='Actual (W)')
-    ax.plot(df['Month'].astype(str), df['Predicted_Usage_Watts'], label='Predicted (W)', linestyle='--')
-    ax.set_xlabel("Month")
+    ax.plot(df['Month'].astype(str) + "-" + df['Year'].astype(str), df['Electricity_Usage_Watts'], label='Actual (W)')
+    ax.plot(df['Month'].astype(str) + "-" + df['Year'].astype(str), df['Predicted_Usage_Watts'], label='Predicted (W)', linestyle='--')
+    ax.set_xlabel("Month-Year")
     ax.set_ylabel("Electricity Usage (W)")
     ax.legend()
+    plt.xticks(rotation=45)
     st.pyplot(fig)
 
     st.subheader("⚙️ Key Metrics")
@@ -104,6 +99,20 @@ years = list(range(1, 6))
 num = st.selectbox("Please select number of years:", years, index=0)
 st.session_state.num_years = num
 
+# Step 1b: Select the exact years from 1990 to 2024 with multiselect limited by number chosen
+available_years = list(range(1990, 2025))
+selected_years = st.multiselect(
+    f"Select exactly {num} year(s):",
+    available_years,
+    default=available_years[-num:]
+)
+# Validate selection length
+if len(selected_years) != num:
+    st.warning(f"Please select exactly {num} year(s).")
+    st.stop()
+else:
+    st.session_state.selected_years = selected_years
+
 # ─────────────── Step 2: Data Input Method ───────────────
 st.subheader("Step 2: Choose data input method:")
 mode = st.radio("Select input type:", ["Upload CSV File", "Manual Entry"])
@@ -117,6 +126,23 @@ if mode == "Upload CSV File":
         'Internal_Temp_C', 'Machinery_Usage_Percent',
         'Lighting_Usage_Percent', 'HVAC_Usage_Percent'
     ])
+
+    # Fill template with blank rows for the selected years & 12 months each
+    rows = []
+    for y in selected_years:
+        for m in range(1, 13):
+            rows.append({
+                'Year': y,
+                'Month': m,
+                'Electricity_Usage_Watts': np.nan,
+                'External_Temp_C': np.nan,
+                'Internal_Temp_C': np.nan,
+                'Machinery_Usage_Percent': np.nan,
+                'Lighting_Usage_Percent': np.nan,
+                'HVAC_Usage_Percent': np.nan
+            })
+    template = pd.DataFrame(rows)
+
     buf = io.StringIO()
     template.to_csv(buf, index=False)
     st.download_button("⬇️ Download CSV Template", buf.getvalue(), "template.csv", "text/csv")
@@ -124,18 +150,22 @@ if mode == "Upload CSV File":
     upload = st.file_uploader("Upload your completed CSV", type="csv")
     if upload is not None:
         df_csv = pd.read_csv(upload)
-        st.write(df_csv.head())
-        if st.button("Run AI Analysis on CSV"):
-            st.session_state.results = run_ai_energy_analysis(df_csv)
+        # Check if uploaded years and months match selection
+        years_in_csv = sorted(df_csv['Year'].unique())
+        if sorted(selected_years) != years_in_csv:
+            st.error(f"Uploaded CSV years {years_in_csv} do not match your selected years {selected_years}.")
+        elif not all(month in df_csv['Month'].values for month in range(1, 13)):
+            st.error("Uploaded CSV must contain all 12 months for each selected year.")
+        else:
+            st.write(df_csv.head())
+            if st.button("Run AI Analysis on CSV"):
+                st.session_state.results = run_ai_energy_analysis(df_csv)
 
 # ─────────────── Step 3B: Manual Entry ───────────────
 elif mode == "Manual Entry":
     st.subheader("✍️ Manual Data Entry")
     entries = []
-    years_list = []
-    for i in range(st.session_state.num_years):
-        year = st.number_input(f"Enter Year #{i+1}", min_value=1990, max_value=2100, value=2020)
-        years_list.append(year)
+    for year in selected_years:
         st.markdown(f"#### Data for Year {year}")
         for m in range(1, 13):
             with st.expander(f"Month {m}"):
