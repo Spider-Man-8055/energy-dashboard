@@ -40,6 +40,18 @@ if 'data_mode' not in st.session_state:
 # ─────────────── AI Analysis Function ───────────────
 def run_ai_energy_analysis(df):
     df = df.copy()
+    # Convert month name to numeric if necessary
+    if df['Month'].dtype == object:
+        month_map = {
+        'January': 1, 'February': 2, 'March': 3, 'April': 4,
+        'May': 5, 'June': 6, 'July': 7, 'August': 8,
+        'September': 9, 'October': 10, 'November': 11, 'December': 12,
+        'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4,
+        'Jun': 6, 'Jul': 7, 'Aug': 8, 'Sep': 9,
+        'Oct': 10, 'Nov': 11, 'Dec': 12
+        }
+    df['Month'] = df['Month'].map(lambda x: month_map.get(x.strip(), x)).astype(int)
+
     df['Energy_kWh'] = df['Electricity_Usage_Watts'] / 1000
     df['Cost_INR'] = df['Energy_kWh'] * TARIFF
     df['CO2_kg'] = df['Energy_kWh'] * CO2_PER_KWH
