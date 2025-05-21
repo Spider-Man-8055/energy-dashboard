@@ -27,7 +27,7 @@ st.markdown(
     </style>
     """, unsafe_allow_html=True
 )
-st.title("🌱 AI Energy Dashboard for Industries")
+st.title("🌱 AI Energy Dashboard for Small Scale Industries")
 
 # ─────────────── Session State Initialization ───────────────
 if 'num_years' not in st.session_state:
