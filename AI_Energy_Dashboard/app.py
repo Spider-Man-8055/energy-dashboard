@@ -154,6 +154,7 @@ def run_ai_energy_analysis(df):
     - Benchmark: {df['Benchmark'].iloc[-1]}
     - Efficiency Score: {(df['Trend_3M_kWh'].mean()/df['Energy_kWh'].mean()*100):.1f}%"""   
 
+    
     else:
         st.info("Run energy analysis first to generate summary and enable AI chatbot.")
 
@@ -276,10 +277,6 @@ elif mode == "Manual Entry":
         df_manual = pd.DataFrame(entries)
         st.session_state.results = run_ai_energy_analysis(df_manual)
 
-# ─────────────── Results Section ───────────────
-if 'results' in st.session_state:
-    st.subheader("✅ AI Analysis Results")
-    st.write(st.session_state.results.head())
     # ─────────────── Chatbot Section ───────────────
     if 'analysis_summary' in st.session_state:
         st.subheader("💬 Ask AI about your energy analysis")
@@ -331,4 +328,10 @@ if 'results' in st.session_state:
         for q, a in reversed(st.session_state.chat_history):
             st.markdown(f"**Q:** {q}")
             st.markdown(f"**A:** {a}")
+
+
+# ─────────────── Results Section ───────────────
+if 'results' in st.session_state:
+    st.subheader("✅ AI Analysis Results")
+    st.write(st.session_state.results.head())
 
