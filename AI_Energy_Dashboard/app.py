@@ -153,25 +153,31 @@ def run_ai_energy_analysis(df):
     - Benchmark: {df['Benchmark'].iloc[-1]}
     - Efficiency Score: {(df['Trend_3M_kWh'].mean()/df['Energy_kWh'].mean()*100):.1f}%"""   
     # ─────────────── Chatbot Section ───────────────
-    if 'analysis_summary' in 
-    st.session_state:    
-        st.subheader(\"💬 Ask AI about your energy analysis\")    
-        if 'chat_history' not in st.session_state:        
+if 'analysis_summary' in st.session_state:
+    st.subheader("💬 Ask AI about your energy analysis")
+    if 'chat_history' not in st.session_state:
         st.session_state.chat_history = []
-        user_query = st.text_input(\"Ask a question about the report:\")
-        if st.button(\"Ask AI\") and user_query:
-        prompt = f\"{st.session_state.analysis_summary}
-        User Question: {user_query}Answer:"       
-        with st.spinner(\"Thinking...\"):           
-        response = openai.ChatCompletion.create(model=\"gpt-3.5-turbo\",messages=[
-        {\"role\": \"system\", \"content\": \"You are a helpful energy analyst assistant.\"},
-        {\"role\": \"user\", \"content\": prompt}
-        ]            )
-        answer = response['choices'][0]['message']['content']
-        st.session_state.chat_history.append((user_query, answer))
-        for q, a in reversed(st.session_state.chat_history):
-        st.markdown(f\"**Q:** {q}\")        
-        st.markdown(f\"**A:** {a}\")"
+
+    user_query = st.text_input("Ask a question about the report:")
+    if st.button("Ask AI") and user_query:
+        prompt = f"""{st.session_state.analysis_summary}
+User Question: {user_query}
+Answer:"""
+        with st.spinner("Thinking..."):
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a helpful energy analyst assistant."},
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            answer = response['choices'][0]['message']['content']
+            st.session_state.chat_history.append((user_query, answer))
+
+    for q, a in reversed(st.session_state.chat_history):
+        st.markdown(f"**Q:** {q}")
+        st.markdown(f"**A:** {a}")
+
 
     # Download CSV
     csv_data=df.to_csv(index=False)
