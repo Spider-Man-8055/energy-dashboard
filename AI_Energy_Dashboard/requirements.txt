@@ -7,3 +7,4 @@ streamlit
 tensorflow
 flask
 reportlab
+openai
