@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import tensorflow as tf
 import openai
+import os
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.linear_model import LinearRegression
 from tensorflow.keras.models import Sequential
@@ -16,7 +17,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 # ─────────────── Constants ───────────────
 TARIFF = 8.5  # INR per kWh
 CO2_PER_KWH = 0.82
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+openai.api_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 
 # ─────────────── Streamlit Setup ───────────────
 st.set_page_config(page_title="AI Energy Dashboard", layout="wide")
