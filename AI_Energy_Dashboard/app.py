@@ -153,16 +153,16 @@ def run_ai_energy_analysis(df):
     - Benchmark: {df['Benchmark'].iloc[-1]}
     - Efficiency Score: {(df['Trend_3M_kWh'].mean()/df['Energy_kWh'].mean()*100):.1f}%"""   
     # ─────────────── Chatbot Section ───────────────
-if 'analysis_summary' in st.session_state:
-    st.subheader("💬 Ask AI about your energy analysis")
+    if 'analysis_summary' in st.session_state:
+        st.subheader("💬 Ask AI about your energy analysis")
     if 'chat_history' not in st.session_state:
         st.session_state.chat_history = []
 
     user_query = st.text_input("Ask a question about the report:")
     if st.button("Ask AI") and user_query:
         prompt = f"""{st.session_state.analysis_summary}
-User Question: {user_query}
-Answer:"""
+    User Question: {user_query}
+    Answer:"""
         with st.spinner("Thinking..."):
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
