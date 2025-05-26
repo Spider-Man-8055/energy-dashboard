@@ -16,7 +16,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 # ─────────────── Constants ───────────────
 TARIFF = 8.5  # INR per kWh
 CO2_PER_KWH = 0.82
-openai.api_key = "YOUR_OPENAI_API_KEY"
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # ─────────────── Streamlit Setup ───────────────
 st.set_page_config(page_title="AI Energy Dashboard", layout="wide")
@@ -145,7 +145,33 @@ def run_ai_energy_analysis(df):
     for r in recs: st.markdown(f"- {r}")
 
      # Save summary for chatbot
-    st.session_state.analysis_summary = f\"\"\"\n    Energy Summary:\n    - Total Energy: {df['Energy_kWh'].sum():.1f} kWh\n    - Total Cost: ₹{df['Cost_INR'].sum():.2f}\n    - CO2 Emissions: {df['CO2_kg'].sum():.2f} kg\n    - Peak Usage: {peak_val:.1f} kWh in {int(peak_year)}-{int(peak_month)}\n    - Benchmark: {df['Benchmark'].iloc[-1]}\n    - Efficiency Score: {(df['Trend_3M_kWh'].mean()/df['Energy_kWh'].mean()*100):.1f}%\n\"\"\"\n\n    # Download CSV\n    csv_data = df.to_csv(index=False)\n    st.download_button(\"Download CSV\", csv_data, \"energy_report.csv\", \"text/csv\")\n\n    # Download PDF\n    buffer = io.BytesIO()\n    doc = SimpleDocTemplate(buffer, pagesize=letter)\n    styles = getSampleStyleSheet()\n    elems = [Paragraph(\"AI Energy Analysis Report\", styles['Title']), Spacer(1, 12)]\n    elems.append(Paragraph(f\"Total Energy: {df['Energy_kWh'].sum():.1f} kWh\", styles['Normal']))\n    elems.append(Paragraph(f\"Total Cost: ₹{df['Cost_INR'].sum():.2f}\", styles['Normal']))\n    elems.append(Paragraph(f\"Total CO₂: {df['CO2_kg'].sum():.2f} kg\", styles['Normal']))\n    elems.append(Spacer(1, 12))\n    data = [df.columns.tolist()] + df.head(10).values.tolist()\n    elems.append(Table(data))\n    doc.build(elems)\n    buffer.seek(0)\n    st.download_button(\"Download PDF\", buffer, \"energy_report.pdf\", \"application/pdf\")\n\n    return df\n\n# ─────────────── Chatbot Section ───────────────\nif 'analysis_summary' in st.session_state:\n    st.subheader(\"💬 Ask AI about your energy analysis\")\n\n    if 'chat_history' not in st.session_state:\n        st.session_state.chat_history = []\n\n    user_query = st.text_input(\"Ask a question about the report:\")\n\n    if st.button(\"Ask AI\") and user_query:\n        prompt = f\"{st.session_state.analysis_summary}\\n\\nUser Question: {user_query}\\nAnswer:\"\n        with st.spinner(\"Thinking...\"):\n            response = openai.ChatCompletion.create(\n                model=\"gpt-3.5-turbo\",\n                messages=[\n                    {\"role\": \"system\", \"content\": \"You are a helpful energy analyst assistant.\"},\n                    {\"role\": \"user\", \"content\": prompt}\n                ]\n            )\n            answer = response['choices'][0]['message']['content']\n            st.session_state.chat_history.append((user_query, answer))\n\n    for q, a in reversed(st.session_state.chat_history):\n        st.markdown(f\"**Q:** {q}\")\n        st.markdown(f\"**A:** {a}\")"
+    st.session_state.analysis_summary = f"""    Energy Summary:
+    - Total Energy: {df['Energy_kWh'].sum():.1f} kWh
+    - Total Cost: ₹{df['Cost_INR'].sum():.2f}
+    - CO2 Emissions: {df['CO2_kg'].sum():.2f} kg
+    - Peak Usage: {peak_val:.1f} kWh in {int(peak_year)}-{int(peak_month)}
+    - Benchmark: {df['Benchmark'].iloc[-1]}
+    - Efficiency Score: {(df['Trend_3M_kWh'].mean()/df['Energy_kWh'].mean()*100):.1f}%"""   
+    # ─────────────── Chatbot Section ───────────────
+    if 'analysis_summary' in 
+    st.session_state:    
+        st.subheader(\"💬 Ask AI about your energy analysis\")    
+        if 'chat_history' not in st.session_state:        
+        st.session_state.chat_history = []
+        user_query = st.text_input(\"Ask a question about the report:\")
+        if st.button(\"Ask AI\") and user_query:
+        prompt = f\"{st.session_state.analysis_summary}
+        User Question: {user_query}Answer:"       
+        with st.spinner(\"Thinking...\"):           
+        response = openai.ChatCompletion.create(model=\"gpt-3.5-turbo\",messages=[
+        {\"role\": \"system\", \"content\": \"You are a helpful energy analyst assistant.\"},
+        {\"role\": \"user\", \"content\": prompt}
+        ]            )
+        answer = response['choices'][0]['message']['content']
+        st.session_state.chat_history.append((user_query, answer))
+        for q, a in reversed(st.session_state.chat_history):
+        st.markdown(f\"**Q:** {q}\")        
+        st.markdown(f\"**A:** {a}\")"
 
     # Download CSV
     csv_data=df.to_csv(index=False)
