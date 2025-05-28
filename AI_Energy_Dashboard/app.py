@@ -155,7 +155,7 @@ def run_ai_energy_analysis(df):
     - Efficiency Score: {(df['Trend_3M_kWh'].mean()/df['Energy_kWh'].mean()*100):.1f}%"""   
 
     
-    else:
+else:
         st.info("Run energy analysis first to generate summary and enable AI chatbot.")
 
     # Download CSV
