@@ -39,31 +39,35 @@ if 'data_mode' not in st.session_state:
     st.session_state.data_mode = None
 
 # ─────────────── AI Analysis Function ───────────────
+# ─────────────── AI Analysis Function ───────────────
 def run_ai_energy_analysis(df):
     df = df.copy()
-# Convert month names (if any) to numbers
+
+    # Convert month names (if any) to numbers
     month_map = {
-    'January': 1, 'February': 2, 'March': 3, 'April': 4,
-    'May': 5, 'June': 6, 'July': 7, 'August': 8,
-    'September': 9, 'October': 10, 'November': 11, 'December': 12,
-    'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4,
-    'Jun': 6, 'Jul': 7, 'Aug': 8, 'Sep': 9,
-    'Oct': 10, 'Nov': 11, 'Dec': 12
+        'January': 1, 'February': 2, 'March': 3, 'April': 4,
+        'May': 5, 'June': 6, 'July': 7, 'August': 8,
+        'September': 9, 'October': 10, 'November': 11, 'December': 12,
+        'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4,
+        'Jun': 6, 'Jul': 7, 'Aug': 8, 'Sep': 9,
+        'Oct': 10, 'Nov': 11, 'Dec': 12
     }
 
     if df['Month'].dtype == object:
         df['Month'] = df['Month'].map(lambda x: month_map.get(str(x).strip(), x)).astype(int)
+
+    # Basic Calculations
     df['Energy_kWh'] = df['Electricity_Usage_Watts'] / 1000
     df['Cost_INR'] = df['Energy_kWh'] * TARIFF
     df['CO2_kg'] = df['Energy_kWh'] * CO2_PER_KWH
     df['Temp_Delta'] = df['Avg_Internal_Temp_C'] - df['Avg_External_Temp_C']
 
-    # Trends & peak
+    # Trends & Peak
     df['Trend_3M_kWh'] = df['Energy_kWh'].rolling(3, min_periods=1).mean()
     peak_idx = df['Energy_kWh'].idxmax()
-    peak_year, peak_month, peak_val = df.loc[peak_idx, ['Year','Month','Energy_kWh']]
+    peak_year, peak_month, peak_val = df.loc[peak_idx, ['Year', 'Month', 'Energy_kWh']]
 
-   # LSTM Model for Cost Forecast
+    # LSTM Cost Forecast
     df['Month_Index'] = (df['Year'] - df['Year'].min()) * 12 + df['Month']
     df = df.sort_values('Month_Index')
     cost_series = df['Cost_INR'].values.reshape(-1, 1)
@@ -72,97 +76,96 @@ def run_ai_energy_analysis(df):
 
     X, y = [], []
     for i in range(len(cost_scaled) - 3):
-        X.append(cost_scaled[i:i+3])
-        y.append(cost_scaled[i+3])
-        X, y = np.array(X), np.array(y)
+        X.append(cost_scaled[i:i + 3])
+        y.append(cost_scaled[i + 3])
+    X, y = np.array(X), np.array(y)
 
-        model = Sequential([
-            Input(shape=(3, 1)),
-            LSTM(16, activation='relu'),
-            Dense(1)
-        ])
-        model.compile(optimizer='adam', loss='mse')
-        model.fit(X, y, epochs=80, verbose=0)
+    model = Sequential([
+        Input(shape=(3, 1)),
+        LSTM(16, activation='relu'),
+        Dense(1)
+    ])
+    model.compile(optimizer='adam', loss='mse')
+    model.fit(X, y, epochs=80, verbose=0)
 
-        last_seq = cost_scaled[-3:].reshape(1, 3, 1)
-        next_cost_scaled = model.predict(last_seq)[0][0]
-        next_cost = scaler.inverse_transform([[next_cost_scaled]])[0][0]
-
+    last_seq = cost_scaled[-3:].reshape(1, 3, 1)
+    next_cost_scaled = model.predict(last_seq)[0][0]
+    next_cost = scaler.inverse_transform([[next_cost_scaled]])[0][0]
 
     # Recommendations
-        avg_usage = df[['Machinery_Usage_Percent','Lighting_Usage_Percent','HVAC_Usage_Percent']].mean()
-        top_comp = avg_usage.idxmax().replace('_Usage_Percent','')
-        recs = [
-            f"🔺 Peak usage: {peak_val:.1f} kWh in {int(peak_year)}-{'%02d'%peak_month}",
-            f"💡 Optimize {top_comp} usage (avg {avg_usage[top_comp+'_Usage_Percent']:.1f}%)",
-            "💡 Adjust HVAC setpoints by 1-2°C",
-            "💡 Implement LED lighting and sensor controls",
-            "🌱 Conduct regular equipment maintenance"
-        ]
+    avg_usage = df[['Machinery_Usage_Percent', 'Lighting_Usage_Percent', 'HVAC_Usage_Percent']].mean()
+    top_comp = avg_usage.idxmax().replace('_Usage_Percent', '')
+    recs = [
+        f"🔺 Peak usage: {peak_val:.1f} kWh in {int(peak_year)}-{'%02d' % peak_month}",
+        f"💡 Optimize {top_comp} usage (avg {avg_usage[top_comp + '_Usage_Percent']:.1f}%)",
+        "💡 Adjust HVAC setpoints by 1-2°C",
+        "💡 Implement LED lighting and sensor controls",
+        "🌱 Conduct regular equipment maintenance"
+    ]
 
     # Benchmark
-        thresh = df['Energy_kWh'].mean()*0.9
-        df['Benchmark'] = df['Energy_kWh'].apply(lambda x: 'Good' if x<=thresh else 'High')
+    thresh = df['Energy_kWh'].mean() * 0.9
+    df['Benchmark'] = df['Energy_kWh'].apply(lambda x: 'Good' if x <= thresh else 'High')
 
     # Plot 1: Energy
-        st.subheader("📊 Energy Consumption & Trends")
-        fig1, ax1 = plt.subplots(figsize=(10,4))
-        df['Label']=df['Year'].astype(str)+'-'+df['Month'].astype(str).str.zfill(2)
-        ax1.plot(df['Label'],df['Energy_kWh'],marker='o',label='Actual kWh')
-        ax1.plot(df['Label'],df['Trend_3M_kWh'],linestyle='--',label='3M Avg')
-        ax1.set_xticklabels(df['Label'],rotation=45)
-        ax1.set_ylabel('kWh')
-        ax1.legend()
-        st.pyplot(fig1)
+    st.subheader("📊 Energy Consumption & Trends")
+    fig1, ax1 = plt.subplots(figsize=(10, 4))
+    df['Label'] = df['Year'].astype(str) + '-' + df['Month'].astype(str).str.zfill(2)
+    ax1.plot(df['Label'], df['Energy_kWh'], marker='o', label='Actual kWh')
+    ax1.plot(df['Label'], df['Trend_3M_kWh'], linestyle='--', label='3M Avg')
+    ax1.set_xticklabels(df['Label'], rotation=45)
+    ax1.set_ylabel('kWh')
+    ax1.legend()
+    st.pyplot(fig1)
 
     # Plot 2: Cost Trend
-        st.subheader("📈 Cost Trend Over Time")
-        fig2, ax2 = plt.subplots(figsize=(10,4))
-        ax2.plot(df['Label'],df['Cost_INR'],marker='x',color='orange')
-        ax2.set_xticklabels(df['Label'],rotation=45)
-        ax2.set_ylabel('Cost (INR)')
-        st.pyplot(fig2)
+    st.subheader("📈 Cost Trend Over Time")
+    fig2, ax2 = plt.subplots(figsize=(10, 4))
+    ax2.plot(df['Label'], df['Cost_INR'], marker='x', color='orange')
+    ax2.set_xticklabels(df['Label'], rotation=45)
+    ax2.set_ylabel('Cost (INR)')
+    st.pyplot(fig2)
 
     # KPIs
-        st.subheader("💰 Cost Forecast & 🌎 CO₂ Emissions")
-        c1,c2,c3=st.columns(3)
-        c1.metric("Next Month Cost",f"₹{next_cost:.2f}")
-        c2.metric("Total Cost",f"₹{df['Cost_INR'].sum():.2f}")
-        c3.metric("Total CO₂",f"{df['CO2_kg'].sum():.2f} kg")
+    st.subheader("💰 Cost Forecast & 🌎 CO₂ Emissions")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Next Month Cost", f"₹{next_cost:.2f}")
+    c2.metric("Total Cost", f"₹{df['Cost_INR'].sum():.2f}")
+    c3.metric("Total CO₂", f"{df['CO2_kg'].sum():.2f} kg")
 
-        st.subheader("⚙️ Key Performance Indicators")
-        k1,k2,k3,k4,k5=st.columns(5)
-        k1.metric("Total Energy",f"{df['Energy_kWh'].sum():.1f} kWh")
-        k2.metric("Avg Monthly kWh",f"{df['Energy_kWh'].mean():.1f}")
-        k3.metric("Peak Month",f"{int(peak_year)}-{'%02d'%peak_month}")
-        k4.metric("Efficiency Score",f"{(df['Trend_3M_kWh'].mean()/df['Energy_kWh'].mean()*100):.1f}%")
-        k5.metric("Benchmark",df['Benchmark'].iloc[-1])
+    st.subheader("⚙️ Key Performance Indicators")
+    k1, k2, k3, k4, k5 = st.columns(5)
+    k1.metric("Total Energy", f"{df['Energy_kWh'].sum():.1f} kWh")
+    k2.metric("Avg Monthly kWh", f"{df['Energy_kWh'].mean():.1f}")
+    k3.metric("Peak Month", f"{int(peak_year)}-{'%02d' % peak_month}")
+    k4.metric("Efficiency Score", f"{(df['Trend_3M_kWh'].mean() / df['Energy_kWh'].mean() * 100):.1f}%")
+    k5.metric("Benchmark", df['Benchmark'].iloc[-1])
 
-        st.subheader("🔧 Recommendations to Optimize Energy")
-        for r in recs: st.markdown(f"- {r}")  
+    st.subheader("🔧 Recommendations to Optimize Energy")
+    for r in recs:
+        st.markdown(f"- {r}")
 
     # Download CSV
-    csv_data=df.to_csv(index=False)
-    st.download_button("Download CSV",csv_data,"energy_report.csv","text/csv")
+    csv_data = df.to_csv(index=False)
+    st.download_button("Download CSV", csv_data, "energy_report.csv", "text/csv")
 
     # Download PDF
-    buffer=io.BytesIO()
-    doc=SimpleDocTemplate(buffer,pagesize=letter)
-    styles=getSampleStyleSheet()
-    elems=[Paragraph("AI Energy Analysis Report",styles['Title']),Spacer(1,12)]
-    # Add KPIs to PDF
-    elems.append(Paragraph(f"Total Energy: {df['Energy_kWh'].sum():.1f} kWh",styles['Normal']))
-    elems.append(Paragraph(f"Total Cost: ₹{df['Cost_INR'].sum():.2f}",styles['Normal']))
-    elems.append(Paragraph(f"Total CO₂: {df['CO2_kg'].sum():.2f} kg",styles['Normal']))
-    elems.append(Spacer(1,12))
-    # Table of first few rows
-    data=[df.columns.tolist()]+df.head(10).values.tolist()
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    styles = getSampleStyleSheet()
+    elems = [Paragraph("AI Energy Analysis Report", styles['Title']), Spacer(1, 12)]
+    elems.append(Paragraph(f"Total Energy: {df['Energy_kWh'].sum():.1f} kWh", styles['Normal']))
+    elems.append(Paragraph(f"Total Cost: ₹{df['Cost_INR'].sum():.2f}", styles['Normal']))
+    elems.append(Paragraph(f"Total CO₂: {df['CO2_kg'].sum():.2f} kg", styles['Normal']))
+    elems.append(Spacer(1, 12))
+    data = [df.columns.tolist()] + df.head(10).values.tolist()
     elems.append(Table(data))
     doc.build(elems)
     buffer.seek(0)
-    st.download_button("Download PDF",buffer,"energy_report.pdf","application/pdf")
+    st.download_button("Download PDF", buffer, "energy_report.pdf", "application/pdf")
 
     return df
+
 
 # ─────────────── Step 1: Years Selection ───────────────
 st.subheader("How many years of data would you like to analyze?")
