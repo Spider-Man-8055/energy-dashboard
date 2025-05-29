@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import tensorflow as tf
-import openai
 import os
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.linear_model import LinearRegression
@@ -17,7 +16,6 @@ from reportlab.lib.styles import getSampleStyleSheet
 # ─────────────── Constants ───────────────
 TARIFF = 8.5  # INR per kWh
 CO2_PER_KWH = 0.82
-openai.api_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 
 # ─────────────── Streamlit Setup ───────────────
 st.set_page_config(page_title="AI Energy Dashboard", layout="wide")
@@ -143,18 +141,7 @@ def run_ai_energy_analysis(df):
         k5.metric("Benchmark",df['Benchmark'].iloc[-1])
 
         st.subheader("🔧 Recommendations to Optimize Energy")
-        for r in recs: st.markdown(f"- {r}")
-
-     # Save summary for chatbot
-        st.session_state.analysis_summary = f"""    Energy Summary:
-        - Total Energy: {df['Energy_kWh'].sum():.1f} kWh
-        - Total Cost: ₹{df['Cost_INR'].sum():.2f}
-        - CO2 Emissions: {df['CO2_kg'].sum():.2f} kg
-        - Peak Usage: {peak_val:.1f} kWh in {int(peak_year)}-{int(peak_month)}
-        - Benchmark: {df['Benchmark'].iloc[-1]}
-        - Efficiency Score: {(df['Trend_3M_kWh'].mean()/df['Energy_kWh'].mean()*100):.1f}%"""   
-
-    
+        for r in recs: st.markdown(f"- {r}")  
     else:
         st.info("Run energy analysis first to generate summary and enable AI chatbot.")
 
@@ -276,59 +263,6 @@ elif mode == "Manual Entry":
     if st.button("Run AI Analysis on Manual Data"):
         df_manual = pd.DataFrame(entries)
         st.session_state.results = run_ai_energy_analysis(df_manual)
-
-    # ─────────────── Chatbot Section ───────────────
-    if 'analysis_summary' in st.session_state:
-        st.subheader("💬 Ask AI about your energy analysis")
-
-        if 'chat_history' not in st.session_state:
-            st.session_state.chat_history = []
-
-        user_query = st.text_input("Ask a question about the report:")
-
-        if st.button("Ask AI") and user_query:
-            prompt = f"""
-    You are an expert energy analyst assistant. Use the energy summary below to answer questions accurately and helpfully.
-
-    Energy Summary:
-    {st.session_state.analysis_summary}
-
-    Example Q&A:
-    Q: What does the efficiency score mean?
-    A: The efficiency score indicates how well your energy consumption compares to benchmarks and past trends.
-
-    Q: How can I reduce my energy costs?
-    A: Consider reducing HVAC usage during peak months and upgrading to energy-efficient lighting.
-
-    Q: What does the peak usage tell me?
-    A: Peak usage shows the highest energy consumption in a specific month, which can help identify periods of high demand.
-
-    Now, answer the user's question clearly and concisely.
-
-    Q: {user_query}
-    A:"""
-
-            with st.spinner("Thinking..."):
-                try:
-                    response = openai.ChatCompletion.create(
-                        model="gpt-3.5-turbo",
-                        messages=[
-                            {"role": "system", "content": "You are a helpful energy analyst assistant."},
-                            {"role": "user", "content": prompt}
-                        ],
-                        max_tokens=200,
-                        temperature=0.5,
-                    )
-                    answer = response['choices'][0]['message']['content'].strip()
-                    st.session_state.chat_history.append((user_query, answer))
-                except Exception as e:
-                    st.error(f"OpenAI API error: {e}")
-
-        # Show chat history in reverse (latest first)
-        for q, a in reversed(st.session_state.chat_history):
-            st.markdown(f"**Q:** {q}")
-            st.markdown(f"**A:** {a}")
-
 
 # ─────────────── Results Section ───────────────
 if 'results' in st.session_state:
