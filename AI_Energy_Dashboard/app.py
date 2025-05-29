@@ -57,7 +57,7 @@ def run_ai_energy_analysis(df):
         df['Month'] = df['Month'].map(lambda x: month_map.get(str(x).strip(), x)).astype(int)
 
     # Basic Calculations
-    df['Energy_kWh'] = df['Electricity_Usage_Watts'] / 1000
+    df['Energy_kWh'] = df['Electricity_Usage_Watts']
     df['Cost_INR'] = df['Energy_kWh'] * TARIFF
     df['CO2_kg'] = df['Energy_kWh'] * CO2_PER_KWH
     df['Temp_Delta'] = df['Avg_Internal_Temp_C'] - df['Avg_External_Temp_C']
