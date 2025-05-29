@@ -52,9 +52,7 @@ def run_ai_energy_analysis(df):
     }
 
     if df['Month'].dtype == object:
-    df['Month'] = df['Month'].map(lambda x: month_map.get(str(x).strip(), x)).astype(int)
-
-
+        df['Month'] = df['Month'].map(lambda x: month_map.get(str(x).strip(), x)).astype(int)
         df['Energy_kWh'] = df['Electricity_Usage_Watts'] / 1000
         df['Cost_INR'] = df['Energy_kWh'] * TARIFF
         df['CO2_kg'] = df['Energy_kWh'] * CO2_PER_KWH
