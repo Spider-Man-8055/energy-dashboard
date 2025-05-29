@@ -53,27 +53,27 @@ def run_ai_energy_analysis(df):
 
     if df['Month'].dtype == object:
         df['Month'] = df['Month'].map(lambda x: month_map.get(str(x).strip(), x)).astype(int)
-        df['Energy_kWh'] = df['Electricity_Usage_Watts'] / 1000
-        df['Cost_INR'] = df['Energy_kWh'] * TARIFF
-        df['CO2_kg'] = df['Energy_kWh'] * CO2_PER_KWH
-        df['Temp_Delta'] = df['Avg_Internal_Temp_C'] - df['Avg_External_Temp_C']
+    df['Energy_kWh'] = df['Electricity_Usage_Watts'] / 1000
+    df['Cost_INR'] = df['Energy_kWh'] * TARIFF
+    df['CO2_kg'] = df['Energy_kWh'] * CO2_PER_KWH
+    df['Temp_Delta'] = df['Avg_Internal_Temp_C'] - df['Avg_External_Temp_C']
 
     # Trends & peak
-        df['Trend_3M_kWh'] = df['Energy_kWh'].rolling(3, min_periods=1).mean()
-        peak_idx = df['Energy_kWh'].idxmax()
-        peak_year, peak_month, peak_val = df.loc[peak_idx, ['Year','Month','Energy_kWh']]
+    df['Trend_3M_kWh'] = df['Energy_kWh'].rolling(3, min_periods=1).mean()
+    peak_idx = df['Energy_kWh'].idxmax()
+    peak_year, peak_month, peak_val = df.loc[peak_idx, ['Year','Month','Energy_kWh']]
 
    # LSTM Model for Cost Forecast
-        df['Month_Index'] = (df['Year'] - df['Year'].min()) * 12 + df['Month']
-        df = df.sort_values('Month_Index')
-        cost_series = df['Cost_INR'].values.reshape(-1, 1)
-        scaler = MinMaxScaler()
-        cost_scaled = scaler.fit_transform(cost_series)
+    df['Month_Index'] = (df['Year'] - df['Year'].min()) * 12 + df['Month']
+    df = df.sort_values('Month_Index')
+    cost_series = df['Cost_INR'].values.reshape(-1, 1)
+    scaler = MinMaxScaler()
+    cost_scaled = scaler.fit_transform(cost_series)
 
-        X, y = [], []
-        for i in range(len(cost_scaled) - 3):
-            X.append(cost_scaled[i:i+3])
-            y.append(cost_scaled[i+3])
+    X, y = [], []
+    for i in range(len(cost_scaled) - 3):
+        X.append(cost_scaled[i:i+3])
+        y.append(cost_scaled[i+3])
         X, y = np.array(X), np.array(y)
 
         model = Sequential([
