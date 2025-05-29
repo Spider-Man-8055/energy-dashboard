@@ -243,9 +243,9 @@ elif mode == "Manual Entry":
                 watts = st.number_input(f"Electricity Usage (W) - {year}-{m}", min_value=0.0, key=f"w_{year}_{m}")
                 ext = st.number_input(f"Outdoor Temp (°C) - {year}-{m}", value=30.0, key=f"ext_{year}_{m}")
                 intl = st.number_input(f"Indoor Temp (°C) - {year}-{m}", value=24.0, key=f"int_{year}_{m}")
-                mach = st.slider(f"Machinery Usage (%) - {year}-{m}", 0, 100, 30, key=f"mach_{year}_{m}")
-                light = st.slider(f"Lighting Usage (%) - {year}-{m}", 0, 100, 30, key=f"light_{year}_{m}")
-                hvac = st.slider(f"HVAC Usage (%) - {year}-{m}", 0, 100, 40, key=f"hvac_{year}_{m}")
+                mach = st.slider(f"Machinery_Usage_Percent - {year}-{m}", 0, 100, 30, key=f"mach_{year}_{m}")
+                light = st.slider(f"Lighting_Usage_Percent - {year}-{m}", 0, 100, 30, key=f"light_{year}_{m}")
+                hvac = st.slider(f"HVAC_Usage_Percent- {year}-{m}", 0, 100, 40, key=f"hvac_{year}_{m}")
                 entries.append({
                     'Year': year,
                     'Month': m,
